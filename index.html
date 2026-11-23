@@ -120,6 +120,7 @@
         else if (type === 'void') { tn('sawtooth', 220, 35, 0.9, 0.24); tn('sine', 90, 30, 1.0, 0.3); }
         else if (type === 'warp') { tn('sine', 300, 1400, 0.35, 0.2); tn('sine', 1400, 200, 0.5, 0.16, 0.35); }
         else if (type === 'implode') { nz(0.5, 0.5, 900); tn('square', 120, 18, 0.6, 0.35); }
+        else if (type === 'converge') { nz(0.9, 0.55, 3000); tn('sawtooth', 200, 24, 0.8, 0.32); [660, 880, 1320, 1760].forEach((f, i) => tn('sine', f, f * 1.003, 0.35, 0.14, 0.05 + i * 0.09)); tn('sine', 90, 28, 1.1, 0.34); }
       }
     } catch(e) {}
   }
@@ -1643,7 +1644,8 @@
   function wellUpd(dt) {
     for (let i = wells.length - 1; i >= 0; i--) {
       const w = wells[i]; w.t -= dt; const k = Math.min(1, (w.T0 - w.t) / 0.4), zm = w.long ? 2.4 : 1;
-      const WR = w.vd ? 340 : w.long ? 320 : 210, WS = w.vd ? 1.2 : w.long ? 1 : 0.5, WD = w.vd ? 1.3 : w.long ? 1 : 0.5;   // 일반 블랙홀(블랙홀 건·인력)은 약하게, 원자폭탄의 장기 블랙홀은 그대로
+      const FZ = (w.vd && w.S && w.S.l_time && lgFrz > 0) ? 1 : 0;   // 🔗 시간의 구멍
+      const WR = (w.vd ? 340 : w.long ? 320 : 210) * (1 + 0.35 * FZ), WS = (w.vd ? 1.2 : w.long ? 1 : 0.5) * (1 + 1.2 * FZ), WD = w.vd ? 1.3 : w.long ? 1 : 0.5;   // 일반 블랙홀(블랙홀 건·인력)은 약하게, 원자폭탄의 장기 블랙홀은 그대로
       w.m.scale.setScalar((w.long ? 14 : 10) * zm * k * (1 + Math.sin(T * 14) * 0.08)); w.rg.rotation.set(Math.PI / 2, 0, T * 5); w.rg.scale.setScalar(((w.long ? 42 : 30) * k + Math.sin(T * 9) * 3) * zm); if (w.vd) voidVis(w, k);
       for (const c of cars) {
         if (c === P.car || c.disp || c.type === 'p') continue;
@@ -1665,7 +1667,7 @@
   const lgGeo = { s: new THREE.SphereGeometry(1, 8, 8), cy: new THREE.CylinderGeometry(1, 1, 1, 6, 1, true), coin: new THREE.CylinderGeometry(2.6, 2.6, 0.7, 10), ring: new THREE.RingGeometry(0.88, 1, 48), box: new THREE.BoxGeometry(1, 1, 1) };
   const lgMat = (col, op) => new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: op == null ? 1 : op, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
   const lps = [], lgFx = [], _lgUp = new THREE.Vector3(0, 1, 0);
-  let lgN = 0, lgFrz = 0, lgTwT = 0, lgAuraT = 0, lgPopT = 0, lgPopN = 0, lgRain = null, lgTA = null, lgBnEl = null;
+  let lgSNow = { n: 0 }, lgAN = 0, lgCv = 0, lgN = 0, lgFrz = 0, lgTwT = 0, lgAuraT = 0, lgPopT = 0, lgPopN = 0, lgRain = null, lgTA = null, lgBnEl = null;
   { const st = document.createElement('style');
     st.textContent = `.lgpop{position:fixed;z-index:34;pointer-events:none;font:900 18px system-ui;text-shadow:0 0 8px currentColor,0 2px 3px #000;animation:lgUp .9s ease-out forwards}
       @keyframes lgUp{0%{opacity:0;transform:translate(-50%,-50%) scale(.6)}15%{opacity:1;transform:translate(-50%,-50%) scale(1.15)}100%{opacity:0;transform:translate(-50%,-140%) scale(1)}}
@@ -1718,9 +1720,10 @@
     }
     lgAdd(T, ms, k => { gm.opacity = 0.5 * (1 - k); cr.opacity = 1 - k * k; });
   }
-  function lgSkyBolt(x, y) {
-    const main = lgPath([x + rnd(-40, 40), y + rnd(-40, 40), 520], [x, y, 0], 13, 26); lgSegs(main, 0x8fd8ff, 3.2, 0.45);
-    for (let f = 0; f < 3; f++) { const s = main[2 + Math.floor(Math.random() * 8)]; lgSegs(lgPath([s.x, s.z, s.y], [s.x + rnd(-140, 140), s.z + rnd(-140, 140), Math.max(0, s.y - rnd(90, 200))], 5, 14), 0x8fd8ff, 1.2, 0.35); }
+  function lgSkyBolt(x, y, col) {
+    col = col || 0x8fd8ff;
+    const main = lgPath([x + rnd(-40, 40), y + rnd(-40, 40), 520], [x, y, 0], 13, 26); lgSegs(main, col, 3.2, 0.45);
+    for (let f = 0; f < 3; f++) { const s = main[2 + Math.floor(Math.random() * 8)]; lgSegs(lgPath([s.x, s.z, s.y], [s.x + rnd(-140, 140), s.z + rnd(-140, 140), Math.max(0, s.y - rnd(90, 200))], 5, 14), col, 1.2, 0.35); }
   }
 
   // 조준점: 정면(±0.35rad) 700 안에서 가장 가까운 적 · 없으면 정면 280
@@ -1732,10 +1735,50 @@
     for (const p of peds) if (p.dead <= 0) { const u = pp(p); test(u[0], u[1]); }
     return best || [P.x + cs * 280, P.y + sn * 280];
   }
+  // ===== 🔗 겹침 시너지: 한 무기에 레전드 인첸트를 겹치면 조합마다 효과가 생기고, 4개 전부면 '레전드 합일'
+  const LG_SYN = [
+    { k: ['l_thunder', 'l_void'], ic: '🌪️', n: '폭풍의 눈', d: '공허의 균열이 번개를 뿜어요 (0.45초마다 반경 안 적 하나에게 번개)' },
+    { k: ['l_thunder', 'l_midas'], ic: '⚡', n: '황금 낙뢰', d: '낙뢰가 금빛으로 변하고, 번개에 맞는 적마다 +$1,500' },
+    { k: ['l_thunder', 'l_time'], ic: '🌩️', n: '정지된 심판', d: '시간 정지가 걸리면 멈춘 적 전원에게 하늘에서 번개가 꽂혀요 (최대 10명)' },
+    { k: ['l_midas', 'l_void'], ic: '🪙', n: '금화 소용돌이', d: '균열 주위로 금화가 돌고, 균열이 있는 동안 매초 +$2,000 · 사라질 때 +$20,000' },
+    { k: ['l_midas', 'l_time'], ic: '⏳', n: '시간 금화', d: '시간 정지가 걸릴 때 멈춘 적 한 명당 +$2,000' },
+    { k: ['l_void', 'l_time'], ic: '🕳️', n: '시간의 구멍', d: '시간 정지 중에는 균열의 범위 +35% · 흡입력 2.2배' }
+  ];
+  const LG_ALL = { k: ['l_thunder', 'l_midas', 'l_void', 'l_time'], ic: '👑', n: '레전드 합일', d: '4개를 전부 겹치면 4번째 발사마다 합일 폭격: 4색 충격파 · 금빛 번개 3줄기 · 시계 · 금화 비 · 대폭발 + 균열 + 시간 정지 + $20,000' };
+  function lgS() { let S = {}; try { S = MP.lgSet(); } catch (e) {} S.n = (S.l_thunder ? 1 : 0) + (S.l_midas ? 1 : 0) + (S.l_void ? 1 : 0) + (S.l_time ? 1 : 0); return S; }
+  function lgSynNames(S) { const a = LG_SYN.filter(y => y.k.every(id => S[id])).map(y => y.ic + y.n); if (LG_ALL.k.every(id => S[id])) a.push(LG_ALL.ic + LG_ALL.n); return a; }
+  function lgTargets(x, y, R) {
+    const a = [];
+    for (const p of peds) { if (p.dead > 0) continue; const u = pp(p), d = Math.hypot(u[0] - x, u[1] - y); if (d < R) a.push({ d, x: u[0], y: u[1], k: 'p', o: p }); }
+    for (const o of offs) { if (o.dead > 0) continue; const d = Math.hypot(o.x - x, o.y - y); if (d < R) a.push({ d, x: o.x, y: o.y, k: 'o', o }); }
+    for (const c of cars) { if (c === P.car || c.disp || c.type !== 'c') continue; const d = Math.hypot(c.x - x, c.y - y); if (d < R) a.push({ d, x: c.x, y: c.y, k: 'c', o: c }); }
+    return a.sort((u, v) => u.d - v.d);
+  }
+  function lgHit(k, o, dmg) {
+    if (k === 'p') hitPed(o, true);
+    else if (k === 'o') { o.hp -= dmg; o.fz = Math.max(o.fz || 0, 1.2); if (o.hp <= 0) { const j = offs.indexOf(o); if (j >= 0) killOff(j); } }
+    else { dmgCar(o, dmg); if (cars.includes(o)) { o.stun = Math.max(o.stun || 0, 1.2); o.v *= 0.2; } }
+  }
+  function lgCoins(x, y, z, n, spd) { for (let i = 0; i < n; i++) { const a = rnd(0, 6.283), v = rnd(30, spd); lgP(x, y, z, Math.cos(a) * v, Math.sin(a) * v, rnd(120, 340), { col: 0xffc933, coin: true, life: rnd(1, 1.5), g: 560 }); } }
+  // 🔗 레전드 합일: 4개를 전부 겹친 무기의 4번째 발사마다
+  function lgConverge(x, y) {
+    const cols = [0x8fd8ff, 0xffd23f, 0xc27bff, 0x7fe0ff];
+    lgSkyBolt(x, y, 0xffffff); lgSkyBolt(x + 34, y - 22, 0xffd23f); lgSkyBolt(x - 34, y + 22, 0xc27bff);
+    cols.forEach((c, i) => lgRing(x, y, c, 10, 190 + i * 80, 0.8 + i * 0.15, 3 + i * 1.6, 0.85));
+    lgColumn(x, y, 0xffffff, 16, 720, 1.0, 0.55); lgColumn(x, y, 0xffd23f, 28, 720, 1.3, 0.28); lgColumn(x, y, 0xc27bff, 40, 720, 1.6, 0.2);
+    lgClock(x, y); lgCoins(x, y, 10, 46, 260); lgRain = { x, y, t: 1.4 };
+    for (let i = 0; i < 70; i++) { const a = rnd(0, 6.283), v = rnd(80, 340); lgP(x, y, 6, Math.cos(a) * v, Math.sin(a) * v, rnd(60, 300), { col: cols[i % 4], life: rnd(0.5, 1.1), sz: rnd(1.4, 3.4), g: 380 }); }
+    boom(x, y, 270, 520); MP.pvpRad(x, y, 200, 70, 9); thunderChain(x, y);
+    money += 20000; voidAdd(x, y); timeWarp();
+    lgFlash('rgba(255,250,225,1)', 0.75, 700); shake = Math.max(shake, 20); playSound('converge');
+    lgBanner('👑 레전드 합일', '#fff2a0', '뇌신 · 미다스 · 공허 · 시간 지배'); lgPop(x, y, 40, '+$20,000', '#fff2a0', true);
+  }
   // ---- 🌩️ 뇌신: 낙뢰 + 번개 연쇄 + 감전 정지
   function thunderStrike(x, y) {
-    lgSkyBolt(x, y); lgColumn(x, y, 0x9fe6ff, 9, 520, 0.4, 0.45);
-    lgRing(x, y, 0xe6f6ff, 8, 160, 0.5); lgRing(x, y, 0x5ab8ff, 4, 110, 0.7, 3, 0.7);
+    const gd = !!lgS().l_midas, c1 = gd ? 0xffd23f : 0x8fd8ff;   // 🔗 황금 낙뢰
+    lgSkyBolt(x, y, c1); lgColumn(x, y, gd ? 0xffe27a : 0x9fe6ff, 9, 520, 0.4, 0.45);
+    lgRing(x, y, gd ? 0xfff2a0 : 0xe6f6ff, 8, 160, 0.5); lgRing(x, y, gd ? 0xffa800 : 0x5ab8ff, 4, 110, 0.7, 3, 0.7);
+    if (gd) lgCoins(x, y, 8, 8, 160);
     for (let i = 0; i < 22; i++) { const a = rnd(0, 6.283), s = rnd(60, 260); lgP(x, y, 4, Math.cos(a) * s, Math.sin(a) * s, rnd(60, 220), { col: i % 3 ? 0x9fe6ff : 0xffffff, life: rnd(0.35, 0.75), sz: rnd(1.2, 2.8), g: 520 }); }
     lgFlash('rgba(200,232,255,1)', 0.5, 280); shake = Math.max(shake, 10); playSound('thunder'); boom(x, y, 110, 170); MP.pvpRad(x, y, 110, 60, 9); thunderChain(x, y);
   }
@@ -1746,7 +1789,9 @@
     for (const c of cars) { if (c === P.car || c.disp || c.type !== 'c') continue; const d = Math.hypot(c.x - x, c.y - y); if (d > 6 && d < 240) cand.push({ d, x: c.x, y: c.y, k: 'c', o: c }); }
     cand.sort((a, b) => a.d - b.d); let px = x, py = y, pz = 14;
     for (const e of cand.slice(0, 5)) {
-      lgSegs(lgPath([px, py, pz], [e.x, e.y, 12], 6, 9), 0xbfe8ff, 1.1, 0.3); lgSpark(e.x, e.y, 10, 0xbfe8ff, 5);
+      const gd = !!lgSNow.l_midas || !!lgS().l_midas;
+      lgSegs(lgPath([px, py, pz], [e.x, e.y, 12], 6, 9), gd ? 0xffe27a : 0xbfe8ff, 1.1, 0.3); lgSpark(e.x, e.y, 10, gd ? 0xffd23f : 0xbfe8ff, 5);
+      if (gd) { money += 1500; lgCoins(e.x, e.y, 10, 3, 120); lgPop(e.x, e.y, 24, '+$1,500', '#ffd23f'); }
       if (e.k === 'p') hitPed(e.o, true);
       else if (e.k === 'o') { e.o.hp -= 80; e.o.fz = Math.max(e.o.fz || 0, 1.5); if (e.o.hp <= 0) { const j = offs.indexOf(e.o); if (j >= 0) killOff(j); } }
       else { dmgCar(e.o, 80); if (cars.includes(e.o)) { e.o.stun = Math.max(e.o.stun || 0, 1.5); e.o.v *= 0.2; } }
@@ -1774,7 +1819,7 @@
     const rg2 = mk(new THREE.TorusGeometry(1, 0.06, 8, 40), lgMat(0xff4df0, 0.8)), rg3 = mk(new THREE.TorusGeometry(1, 0.05, 8, 40), lgMat(0x6fd8ff, 0.7));
     const halo = mk(new THREE.SphereGeometry(1, 16, 16), lgMat(0x7a2cff, 0.28)), gr = mk(lgGeo.ring, lgMat(0xa65cff, 0.3)); gr.rotation.x = -Math.PI / 2;
     for (const o of [m, rg, rg2, rg3, halo, gr]) { o.position.set(x, o === gr ? 2.5 : z, y); o.scale.setScalar(0.01); sc.add(o); }
-    wells.push({ x, y, z, t: 15, T0: 15, long: 0, vd: 1, m, rg, rg2, rg3, halo, gr, ex: [rg2, rg3, halo, gr] });
+    wells.push({ x, y, z, t: 15, T0: 15, long: 0, vd: 1, S: lgS(), m, rg, rg2, rg3, halo, gr, ex: [rg2, rg3, halo, gr] });
     lgRing(x, y, 0xc27bff, 10, 260, 0.8); lgFlash('rgba(60,10,110,1)', 0.45, 700); shake = Math.max(shake, 6); lgBanner('🌌 공허의 균열', '#c9a0ff'); playSound('void');
   }
   function voidVis(w, k) {
@@ -1786,12 +1831,15 @@
     w.gr.scale.setScalar(340 * c * (1 + Math.sin(T * 5) * 0.02)); w.gr.material.opacity = 0.22 + 0.12 * Math.sin(T * 6);
     if (lps.length < 330 && k >= 1) for (let n = 0; n < 3; n++) {
       const r = rnd(130, 330), z0 = w.z + rnd(-30, 30);
-      lgP(0, 0, z0, 0, 0, (w.z - z0) / 0.85, { col: [0xc27bff, 0xff4df0, 0x6fd8ff][n % 3], life: 0.85, sz: rnd(1.6, 3), orb: { cx: w.x, cy: w.y, ang: rnd(0, 6.283), rad: r, av: 2.8, rv: -r / 0.85 } });
+      const cn = w.S && w.S.l_midas && n === 0;   // 🔗 금화 소용돌이
+      lgP(0, 0, z0, 0, 0, (w.z - z0) / 0.85, { col: cn ? 0xffc933 : [0xc27bff, 0xff4df0, 0x6fd8ff][n % 3], coin: cn, life: 0.85, sz: cn ? 0.9 : rnd(1.6, 3), orb: { cx: w.x, cy: w.y, ang: rnd(0, 6.283), rad: r, av: 2.8, rv: -r / 0.85 } });
     }
   }
   function voidEnd(w) {
     boom(w.x, w.y, 170, 260); lgRing(w.x, w.y, 0xffffff, 10, 300, 0.6); lgRing(w.x, w.y, 0xc27bff, 10, 230, 0.9, 3);
     for (let i = 0; i < 40; i++) { const a = rnd(0, 6.283), s = rnd(80, 320); lgP(w.x, w.y, w.z, Math.cos(a) * s, Math.sin(a) * s, rnd(-60, 200), { col: i % 2 ? 0xc27bff : 0xff4df0, life: rnd(0.5, 1), sz: rnd(1.6, 3.2), g: 160, drag: 1.2 }); }
+    if (w.S && w.S.l_midas) { money += 20000; lgCoins(w.x, w.y, w.z, 40, 300); lgPop(w.x, w.y, w.z + 20, '+$20,000', '#fff2a0', true); }
+    if (w.S && w.S.l_thunder) for (let i = 0; i < 3; i++) lgSkyBolt(w.x + rnd(-150, 150), w.y + rnd(-150, 150), 0xd9a8ff);
     lgFlash('rgba(235,215,255,1)', 0.55, 500); shake = Math.max(shake, 14); playSound('implode');
   }
 
@@ -1812,7 +1860,10 @@
     for (const car of cars) if (car.type === 'c' && car !== P.car && !car.disp && Math.hypot(car.x - P.x, car.y - P.y) < R) { car.stun = Math.max(car.stun || 0, 3); car.v *= 0.1; c++; }
     lgFrz = 3; lgClock(P.x, P.y); lgRing(P.x, P.y, 0x7fe0ff, 20, 480, 1.1);
     lgFlash('radial-gradient(circle at 50% 50%, rgba(120,200,255,0) 25%, rgba(30,70,150,.75) 100%)', 1, 3000);
-    lgBanner('⏳ 시간 정지', '#7fe0ff', c ? c + '명 정지' : ''); playSound('warp'); shake = Math.max(shake, 5);
+    const S = lgS(); let sub = c ? c + '명 정지' : '';
+    if (S.l_thunder) { const tg = lgTargets(P.x, P.y, R).slice(0, 10); for (const e of tg) { lgSkyBolt(e.x, e.y, 0x9fe6ff); lgHit(e.k, e.o, 70); } if (tg.length) sub += ' · 번개 ' + tg.length; }   // 🔗 정지된 심판
+    if (S.l_midas && c) { money += 2000 * c; lgCoins(P.x, P.y, 14, Math.min(40, c * 5), 240); lgPop(P.x, P.y, 40, '+$' + (2000 * c).toLocaleString(), '#ffd23f', true); sub += ' · +$' + (2000 * c).toLocaleString(); }   // 🔗 시간 금화
+    lgBanner('⏳ 시간 정지', '#7fe0ff', sub); playSound('warp'); shake = Math.max(shake, 5);
   }
 
   // ---- 매 프레임: 입자 · 이펙트 · 들고 있는 동안의 오라
@@ -1832,21 +1883,35 @@
       if (f.t <= 0) { for (const o of f.objs) { sc.remove(o); o.traverse(c => { if (c.material) c.material.dispose(); }); } lgFx.splice(i, 1); }
     }
     if (lgRain) { lgRain.t -= dt; for (let n = 0; n < 2; n++) lgP(lgRain.x + rnd(-170, 170), lgRain.y + rnd(-170, 170), rnd(220, 320), 0, 0, -120, { col: 0xffc933, coin: true, life: 1.4, g: 300 }); if (lgRain.t <= 0) lgRain = null; }
-    let id = null; try { id = (P.onFoot && !activeInterior) ? MP.lg() : null; } catch (e) {}
-    lgAuraT -= dt; const zz = (P.z || 0);
-    if (id && lgAuraT <= 0) {
-      if (id === 'l_thunder') { lgAuraT = 0.16; const a = rnd(0, 6.283), a2 = a + rnd(-1, 1), r2 = rnd(24, 38); lgSegs(lgPath([P.x + Math.cos(a) * 10, P.y + Math.sin(a) * 10, 4 + zz], [P.x + Math.cos(a2) * r2, P.y + Math.sin(a2) * r2, 4 + zz + rnd(0, 26)], 4, 5), 0x8fd8ff, 0.35, 0.13); }
-      else if (id === 'l_midas') { lgAuraT = 0.07; lgP(P.x + rnd(-12, 12), P.y + rnd(-12, 12), zz + rnd(2, 16), 0, 0, rnd(25, 55), { col: 0xffd23f, life: 0.9, sz: 1.5, grow: -0.6 }); }
-      else if (id === 'l_void') { lgAuraT = 0.09; lgP(0, 0, zz + rnd(2, 18), 0, 0, rnd(-6, 10), { col: Math.random() < 0.5 ? 0xc27bff : 0xff4df0, life: 0.75, sz: 1.6, orb: { cx: P.x, cy: P.y, ang: rnd(0, 6.283), rad: rnd(20, 28), av: 5.5, rv: -7 } }); }
-      else if (id === 'l_time') lgAuraT = 0.25;
+    for (const w of wells) if (w.vd && w.S) {   // 🔗 폭풍의 눈 · 금화 소용돌이
+      if (w.S.l_thunder) {
+        w.bt = (w.bt || 0) - dt;
+        if (w.bt <= 0) {
+          w.bt = 0.45; const tg = lgTargets(w.x, w.y, 340);
+          if (tg.length) { const e = tg[Math.floor(Math.random() * tg.length)]; lgSegs(lgPath([w.x, w.y, w.z], [e.x, e.y, 12], 8, 14), 0xd9a8ff, 1.6, 0.3); lgSpark(e.x, e.y, 10, 0xd9a8ff, 6); lgHit(e.k, e.o, 55); }
+          else lgSegs(lgPath([w.x, w.y, w.z], [w.x + rnd(-130, 130), w.y + rnd(-130, 130), 6], 7, 14), 0xd9a8ff, 1.2, 0.25);
+        }
+      }
+      if (w.S.l_midas && w.t < w.T0 - 0.4) { w.pay = (w.pay || 0) + dt; if (w.pay >= 1) { w.pay -= 1; money += 2000; lgPop(w.x, w.y, w.z + 24, '+$2,000', '#ffd23f'); playSound('cash'); } }
     }
-    if (id === 'l_time') {
+    let S = { n: 0 }; try { if (P.onFoot && !activeInterior) S = lgS(); } catch (e) {}
+    lgSNow = S; lgAuraT -= dt; const zz = (P.z || 0);
+    if (S.n && lgAuraT <= 0) {
+      lgAuraT = 0.08; lgAN++;
+      const cl = []; if (S.l_thunder) cl.push(S.l_midas ? 0xffe27a : 0x8fd8ff); if (S.l_midas) cl.push(0xffd23f); if (S.l_void) cl.push(0xc27bff); if (S.l_time) cl.push(0x7fe0ff);
+      if (S.l_thunder && lgAN % 2 === 0) { const a = rnd(0, 6.283), a2 = a + rnd(-1, 1), r2 = rnd(24, 38); lgSegs(lgPath([P.x + Math.cos(a) * 10, P.y + Math.sin(a) * 10, 4 + zz], [P.x + Math.cos(a2) * r2, P.y + Math.sin(a2) * r2, 4 + zz + rnd(0, 26)], 4, 5), S.l_midas ? 0xffe27a : 0x8fd8ff, 0.35, 0.13); }
+      if (S.l_midas) lgP(P.x + rnd(-12, 12), P.y + rnd(-12, 12), zz + rnd(2, 16), 0, 0, rnd(25, 55), { col: 0xffd23f, life: 0.9, sz: 1.5, grow: -0.6 });
+      if (S.l_void) lgP(0, 0, zz + rnd(2, 18), 0, 0, rnd(-6, 10), { col: Math.random() < 0.5 ? 0xc27bff : 0xff4df0, life: 0.75, sz: 1.6, orb: { cx: P.x, cy: P.y, ang: rnd(0, 6.283), rad: rnd(20, 28), av: 5.5, rv: -7 } });
+      if (S.n >= 2) lgP(0, 0, zz + rnd(2, 26), 0, 0, rnd(10, 40), { col: cl[lgAN % cl.length], life: 1, sz: 2, orb: { cx: P.x, cy: P.y, ang: rnd(0, 6.283), rad: 36, av: 3.5, rv: -6 } });   // 🔗 합쳐진 오라: 겹친 인첸트 색이 나선으로 감겨요
+      if (S.n === 4) for (let q = 0; q < 2; q++) lgP(P.x + rnd(-30, 30), P.y + rnd(-30, 30), zz + 1, 0, 0, rnd(70, 130), { col: cl[(lgAN + q) % 4], life: 1.1, sz: 2.2, grow: -0.5 });
+    }
+    if (S.l_time) {
       if (!lgTA) {
         lgTA = new THREE.Group(); const r1 = new THREE.Mesh(lgGeo.ring, lgMat(0x7fe0ff, 0.55)); r1.rotation.x = -Math.PI / 2; r1.scale.setScalar(26); lgTA.add(r1);
         for (let i = 0; i < 12; i++) { const a = i / 12 * 6.283, t = new THREE.Mesh(lgGeo.box, lgMat(0xbff3ff, 0.8)); t.position.set(Math.cos(a) * 30, 0, Math.sin(a) * 30); t.scale.set(i % 3 === 0 ? 7 : 4, 0.8, 1.2); t.rotation.y = -a; lgTA.add(t); }
         const hd = new THREE.Mesh(lgGeo.box, lgMat(0xffffff, 0.7)); hd.scale.set(24, 0.8, 1.4); hd.position.x = 12; lgTA.add(hd); sc.add(lgTA);
       }
-      lgTA.visible = true; lgTA.position.set(P.x, zz + 1.5, P.y); lgTA.rotation.y = -T * 2.2;
+      lgTA.visible = true; lgTA.position.set(P.x, zz + 1.5, P.y); lgTA.rotation.y = -T * 2.2; lgTA.scale.setScalar(S.n === 4 ? 1.7 : 1);
     } else if (lgTA) lgTA.visible = false;
   }
   const stks = [];
@@ -4043,6 +4108,7 @@
         else if (id === 'l_void') { const q = lgAim(); voidAdd(q[0], q[1]); }
         else if (e.d.t === 'hit') (r.hit = r.hit || []).push({ id, v, lv: e.lv });
       }
+      if (enAll(i).filter(e => e.d.leg).map(e => e.d.id).filter((v, n, a) => a.indexOf(v) === n).length === 4) { lgCv++; if (lgCv % 4 === 0) { const q = lgAim(); lgConverge(q[0], q[1]); } }   // 🔗 레전드 합일
       return r;
     }
     function enHit(b, k, t) {   // 총알이 무언가에 맞았을 때 (k: c 차 · p 시민 · o 경찰관)
@@ -4235,7 +4301,8 @@
             + `<div class="ds" style="flex-basis:100%;margin:0">${e.ic} ${e.n} ${[1, 2, 3].map(l => `<b${(cur && cur[0] === sel && cur[1] === l) ? ' style="color:#ffd23f"' : ''}>Lv${l}</b>: ${e.d(e.v[l - 1])}`).join(' · ')}</div></div>`;
         }
         h += '<div class="ds" style="text-align:center;margin-top:6px">새 인첸트를 부여할 때마다 10% 확률로 👑 레전드 인첸트(뇌신·미다스·공허·시간 지배)가 대신 붙어요 · 다른 인첸트로 교체하면 기존 인첸트는 사라져요 · 인첸트는 경매에 팔 때 무기와 함께 가요</div>';
-        h += '<div class="ds" style="margin:12px 0 4px;font-weight:800;color:#ffd23f;font-size:13px">👑 레전드 인첸트 도감</div>' + ENCH.filter(e => e.leg).map(e => `<div class="row"><div class="nm">${e.ic} ${e.n}<div class="ds">${e.d(e.v[0])}</div></div></div>`).join('');
+        h += '<div class="ds" style="margin:12px 0 4px;font-weight:800;color:#ffd23f;font-size:13px">👑 레전드 인첸트 도감</div>' + ENCH.filter(e => e.leg).map(e => `<div class="row"><div class="nm">${e.ic} ${e.n}<div class="ds">${e.d(e.v[0])}</div></div></div>`).join('')
+          + '<div class="ds" style="margin:12px 0 4px;font-weight:800;color:#c9a6ff;font-size:13px">🔗 겹침 시너지 (한 무기에 레전드 인첸트를 겹치세요)</div>' + [...LG_SYN, LG_ALL].map(y => `<div class="row"><div class="nm">${y.ic} ${y.n} <span style="font-size:11px;color:#9fb3c8">${y.k.map(id => ENCH.find(e => e.id === id).n).join(' + ')}</span><div class="ds">${y.d}</div></div></div>`).join('');
       } else {
         const mx = lv >= ENH_MAX;
         h += `<div class="row"><div class="nm">${esc(WP[w].n)} <span style="color:#ffb347">${lv ? '+' + lv : ''}</span><div class="ds">${mx ? 'MAX 강화 완료 (+99)' : `성공 ${enhChance(lv)}% · 비용 ${fmt(enhCost(lv))}${ENH_DROP(lv) ? ' · 실패 시 −1단계' : ''}`} · 데미지 ×${dmgMul(lv).toFixed(2)} · 연사 ×${(1 / cdMul(lv)).toFixed(2)}</div></div><div class="btn o${mx || money < enhCost(lv) ? ' dis' : ''}" data-i="1">${mx ? 'MAX' : '강화'}</div></div>`;
@@ -5148,7 +5215,7 @@
     refreshUI();
     setTimeout(() => { if (!raidResume()) go(myCode); }, 300);
     setInterval(() => { if (lastD && performance.now() - lastForce > 2500) { lastForce = performance.now(); send('s', lastD); } }, 2500);
-    return { tick, hud, mini, wlv, station, shot, hall: () => hall, raid: () => !!raid, raidWant, raidHeli, raidTank, raidSpeed, raidKill, raidCanRob: () => !!raid && raid.ph === 'stl', raidRob, raidBusted, abHole: (x, y) => wellAdd(x, y, 60, 1), nitro: () => nitroT > 0, has: k => !!own[k], pvpOn, pvpCone, pvpRad, pvpRay, boom: boomEv, loot, rideKey, bulletHit, martial: martialEv, busted: bustedEv, dbg: () => ({ last: lastD, st: status, host: isHost(), hostId: hostId(), me: myId, rem: [...remotes.values()].map(r => ({ id: r.id, x: r.x | 0, y: r.y | 0, z: r.z | 0, onFoot: r.onFoot, kind: r.kind, nid: r.nid, drv: !!r.drvC, rd: r.rd, inMap: nidMap.has(r.nid), isP: nidMap.get(r.nid) === P.car, inCars: cars.some(c => c.nid === r.nid) })) }), locked: () => locked, riding: () => !!ride, aimA, aimVz: (v, z0) => v * aimSl(z0), aimSl, god: () => god > 0, jv: () => jumpT > 0 ? 600 : 230, spd: () => (spdT > 0 ? 2 : 1) * (jpOn ? 1.6 : 1) * swiftMul(), fx: fxShot, enHit, relMul, enTag, lg: () => { const e = enAll(wi).find(x => x.d.leg); return e ? e.d.id : null; }, lgNote: i => { const e = enAll(i).find(x => x.d.leg); return e ? ` · ${e.d.ic}${e.d.n}: ${e.d.s}` : ''; }, phys, pS: pSolid, jump: doJump };
+    return { tick, hud, mini, wlv, station, shot, hall: () => hall, raid: () => !!raid, raidWant, raidHeli, raidTank, raidSpeed, raidKill, raidCanRob: () => !!raid && raid.ph === 'stl', raidRob, raidBusted, abHole: (x, y) => wellAdd(x, y, 60, 1), nitro: () => nitroT > 0, has: k => !!own[k], pvpOn, pvpCone, pvpRad, pvpRay, boom: boomEv, loot, rideKey, bulletHit, martial: martialEv, busted: bustedEv, dbg: () => ({ last: lastD, st: status, host: isHost(), hostId: hostId(), me: myId, rem: [...remotes.values()].map(r => ({ id: r.id, x: r.x | 0, y: r.y | 0, z: r.z | 0, onFoot: r.onFoot, kind: r.kind, nid: r.nid, drv: !!r.drvC, rd: r.rd, inMap: nidMap.has(r.nid), isP: nidMap.get(r.nid) === P.car, inCars: cars.some(c => c.nid === r.nid) })) }), locked: () => locked, riding: () => !!ride, aimA, aimVz: (v, z0) => v * aimSl(z0), aimSl, god: () => god > 0, jv: () => jumpT > 0 ? 600 : 230, spd: () => (spdT > 0 ? 2 : 1) * (jpOn ? 1.6 : 1) * swiftMul(), fx: fxShot, enHit, relMul, enTag, lgSet: () => { const o = {}; for (const e of enAll(wi)) if (e.d.leg) o[e.d.id] = 1; return o; }, lgNote: i => { const L = enAll(i).filter(x => x.d.leg); if (!L.length) return ''; const S = {}; for (const x of L) S[x.d.id] = 1; const sy = lgSynNames(S); return ' · ' + [...new Set(L.map(x => x.d.ic + x.d.n))].join(' ') + (sy.length ? ' 🔗 ' + sy.join(' · ') : ': ' + L[0].d.s); }, phys, pS: pSolid, jump: doJump };
   })();
 
   let last = performance.now();
