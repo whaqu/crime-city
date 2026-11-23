@@ -111,6 +111,15 @@
         gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
         osc.connect(gain); gain.connect(audioCtx.destination);
         osc.start(now); osc.stop(now + 0.25);
+      } else {
+        // v22 레전드 인첸트 효과음
+        const tn = (ty, f0, f1, d, v, dl) => { const o = audioCtx.createOscillator(), g = audioCtx.createGain(), t0 = now + (dl || 0); o.type = ty; o.frequency.setValueAtTime(f0, t0); o.frequency.exponentialRampToValueAtTime(Math.max(1, f1), t0 + d); g.gain.setValueAtTime(v, t0); g.gain.exponentialRampToValueAtTime(0.001, t0 + d); o.connect(g); g.connect(audioCtx.destination); o.start(t0); o.stop(t0 + d + 0.02); };
+        const nz = (d, v, f) => { const buf = audioCtx.createBuffer(1, Math.floor(audioCtx.sampleRate * d), audioCtx.sampleRate), dd = buf.getChannelData(0); for (let i = 0; i < dd.length; i++) dd[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / dd.length, 2); const src = audioCtx.createBufferSource(), g = audioCtx.createGain(), fl = audioCtx.createBiquadFilter(); fl.type = 'lowpass'; fl.frequency.value = f; src.buffer = buf; g.gain.value = v; src.connect(fl); fl.connect(g); g.connect(audioCtx.destination); src.start(now); };
+        if (type === 'thunder') { nz(0.6, 0.5, 2600); tn('sawtooth', 160, 28, 0.55, 0.3); }
+        else if (type === 'jackpot') { [880, 1100, 1320, 1760].forEach((f, i) => tn('sine', f, f * 1.002, 0.18, 0.16, i * 0.07)); }
+        else if (type === 'void') { tn('sawtooth', 220, 35, 0.9, 0.24); tn('sine', 90, 30, 1.0, 0.3); }
+        else if (type === 'warp') { tn('sine', 300, 1400, 0.35, 0.2); tn('sine', 1400, 200, 0.5, 0.16, 0.35); }
+        else if (type === 'implode') { nz(0.5, 0.5, 900); tn('square', 120, 18, 0.6, 0.35); }
       }
     } catch(e) {}
   }
@@ -468,10 +477,10 @@
     { id: 'exec', ic: '☠️', n: '처형', t: 'hit', v: [0.25, 0.35, 0.5], d: v => `체력 ${pct(v)}% 이하 경찰·경찰차 즉사` },
     { id: 'reload', ic: '🔄', n: '속장전', t: 'any', v: [0.7, 0.5, 0.3], d: v => `장전 시간 ${pct(1 - v)}% 단축` },
     // 👑 레전드 인첸트 — 강화소에서 새 인첸트를 부여할 때 10% 확률로 대신 붙어요 (선택 불가 · 경매·관리자로도 유통)
-    { id: 'l_thunder', leg: 1, ic: '🌩️', n: '뇌신', t: 'hit', v: [0.35, 0.35, 0.35], d: v => '적중 시 35% 확률로 낙뢰 대폭발 (플레이어에게도 강한 피해)' },
-    { id: 'l_midas', leg: 1, ic: '👑', n: '미다스', t: 'hit', v: [1500, 1500, 1500], d: v => '적중할 때마다 +$1,500 · 8% 확률로 +$25,000 잭팟' },
-    { id: 'l_void', leg: 1, ic: '🌌', n: '공허', t: 'hit', v: [0.25, 0.25, 0.25], d: v => '적중 시 25% 확률로 대형 블랙홀 (모두 빨아들임)' },
-    { id: 'l_time', leg: 1, ic: '⏳', n: '시간 지배', t: 'any', v: [0.5, 0.5, 0.5], d: v => '연사 2배 · 장전 70% 단축 · 이동 +25% · 25% 탄약 무소모 · 30% 치명타' }
+    { id: 'l_thunder', leg: 1, ic: '🌩️', n: '뇌신', t: 'hit', v: [0.5, 0.5, 0.5], s: '50% 낙뢰', d: v => '적중 시 50% 확률로 하늘에서 낙뢰가 떨어져 대폭발 + 주변 5명에게 번개가 연쇄되고 감전돼 1.5초 정지 (플레이어에게도 강한 피해) · 들고 있으면 몸에 전기가 튀어요' },
+    { id: 'l_midas', leg: 1, ic: '👑', n: '미다스', t: 'hit', v: [3000, 3000, 3000], s: '적중마다 +$3,000', d: v => '적중할 때마다 +$3,000 (금화가 튀고 금액이 떠올라요) · 12% 확률로 +$50,000 대박 (금화 비 + 황금 기둥) · 들고 있으면 금빛 반짝임' },
+    { id: 'l_void', leg: 1, ic: '🌌', n: '공허', t: 'hit', v: [0.35, 0.35, 0.35], s: '35% 공허의 균열', d: v => '적중 시 35% 확률로 15초짜리 공허의 균열 생성 · 반경 340 안의 경찰·차를 강하게 빨아들여 갈아버리고, 사라질 때 대폭발 (최대 3개) · 들고 있으면 보라색 기운이 감돌아요' },
+    { id: 'l_time', leg: 1, ic: '⏳', n: '시간 지배', t: 'any', v: [0.5, 0.5, 0.5], s: '연사 2.5배 · 시간 정지', d: v => '연사 2.5배 · 장전 80% 단축 · 이동 +40% · 35% 탄약 무소모 · 40% 치명타 · 쏠 때 6% 확률로 ⏳시간 정지 (3초 · 쿨 9초): 주변 경찰·경찰차·헬기·미사일이 멈춰요 · 들고 있으면 발밑에 시계가 돌아요' }
   ];
   const ENCH_COST = [30000, 120000, 400000];   // 1 / 2 / 3레벨
   const ENCH_TICKET = 50000;
@@ -1595,7 +1604,7 @@
   }
   const bdm = b => b.fall ? b.d * (0.35 + 0.85 * Math.max(0, b.t) / b.t0) : b.d;
   function pierceOk(b, t) { if (b.chain) arcChain(b, t); if (!(b.pr > 0)) return false; b.pr--; (b.ig || (b.ig = new Set())).add(t); if (b.pls) plasmaPop(b.x, b.y, t); return true; }
-  const wmsg = i => msg(WP[i].n + (WP[i].tip ? ' · ' + WP[i].tip : ''));
+  const wmsg = i => msg(WP[i].n + (WP[i].tip ? ' · ' + WP[i].tip : '') + (() => { try { return MP.lgNote(i); } catch (e) { return ''; } })());
   const SPW = []; for (let i = 6; i < WP.length; i++) if (!WP[i].off) SPW.push(i);
   const tpos = t => peds.includes(t) ? pp(t) : (t.tx !== undefined ? [t.tx, t.ty] : [t.x, t.y]);
   function bolt(a, c) {
@@ -1634,8 +1643,8 @@
   function wellUpd(dt) {
     for (let i = wells.length - 1; i >= 0; i--) {
       const w = wells[i]; w.t -= dt; const k = Math.min(1, (w.T0 - w.t) / 0.4), zm = w.long ? 2.4 : 1;
-      const WR = w.long ? 320 : 210, WS = w.long ? 1 : 0.5, WD = w.long ? 1 : 0.5;   // 일반 블랙홀(블랙홀 건·인력)은 약하게, 원자폭탄의 장기 블랙홀은 그대로
-      w.m.scale.setScalar((w.long ? 14 : 10) * zm * k * (1 + Math.sin(T * 14) * 0.08)); w.rg.rotation.set(Math.PI / 2, 0, T * 5); w.rg.scale.setScalar(((w.long ? 42 : 30) * k + Math.sin(T * 9) * 3) * zm);
+      const WR = w.vd ? 340 : w.long ? 320 : 210, WS = w.vd ? 1.2 : w.long ? 1 : 0.5, WD = w.vd ? 1.3 : w.long ? 1 : 0.5;   // 일반 블랙홀(블랙홀 건·인력)은 약하게, 원자폭탄의 장기 블랙홀은 그대로
+      w.m.scale.setScalar((w.long ? 14 : 10) * zm * k * (1 + Math.sin(T * 14) * 0.08)); w.rg.rotation.set(Math.PI / 2, 0, T * 5); w.rg.scale.setScalar(((w.long ? 42 : 30) * k + Math.sin(T * 9) * 3) * zm); if (w.vd) voidVis(w, k);
       for (const c of cars) {
         if (c === P.car || c.disp || c.type === 'p') continue;
         const dx = w.x - c.x, dy = w.y - c.y, d = Math.hypot(dx, dy); if (d > WR || d < 1) continue;
@@ -1647,10 +1656,188 @@
         const mv = (70 + 260 * (1 - d / WR)) * WS * dt, nx = o.x + dx / d * mv, ny = o.y + dy / d * mv;
         if (!solid(nx, o.y, 6)) o.x = nx; if (!solid(o.x, ny, 6)) o.y = ny; if (d < 40) { o.hp -= 80 * WD * dt; if (o.hp <= 0) killOff(j); }
       }
-      for (const p of peds) { if (p.dead > 0) continue; const u = pp(p); if (Math.hypot(u[0] - w.x, u[1] - w.y) < (w.long ? 60 : 42)) { p.wT = (p.wT || 0) + dt; if (p.wT > 0.25) { p.wT = 0; hitPed(p, true); } } }
-      MP.pvpCone((x, y, r) => Math.hypot(x - w.x, y - w.y) < (w.long ? 70 : 50) + r, dt, 0);
-      if (w.t <= 0) { sc.remove(w.m); sc.remove(w.rg); wells.splice(i, 1); if (!w.long) boom(w.x, w.y, 55, 35); }
+      for (const p of peds) { if (p.dead > 0) continue; const u = pp(p); if (Math.hypot(u[0] - w.x, u[1] - w.y) < (w.vd ? 70 : w.long ? 60 : 42)) { p.wT = (p.wT || 0) + dt; if (p.wT > 0.25) { p.wT = 0; hitPed(p, true); } } }
+      MP.pvpCone((x, y, r) => Math.hypot(x - w.x, y - w.y) < (w.vd ? 80 : w.long ? 70 : 50) + r, dt, 0);
+      if (w.t <= 0) { sc.remove(w.m); sc.remove(w.rg); wells.splice(i, 1); if (w.ex) for (const e of w.ex) { sc.remove(e); e.material.dispose(); } if (w.vd) voidEnd(w); else if (!w.long) boom(w.x, w.y, 55, 35); }
     }
+  }
+  // ===== v22 👑 레전드 인첸트 이펙트 (뇌신 · 미다스 · 공허 · 시간 지배) =====
+  const lgGeo = { s: new THREE.SphereGeometry(1, 8, 8), cy: new THREE.CylinderGeometry(1, 1, 1, 6, 1, true), coin: new THREE.CylinderGeometry(2.6, 2.6, 0.7, 10), ring: new THREE.RingGeometry(0.88, 1, 48), box: new THREE.BoxGeometry(1, 1, 1) };
+  const lgMat = (col, op) => new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: op == null ? 1 : op, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+  const lps = [], lgFx = [], _lgUp = new THREE.Vector3(0, 1, 0);
+  let lgFrz = 0, lgTwT = 0, lgAuraT = 0, lgPopT = 0, lgPopN = 0, lgRain = null, lgTA = null, lgBnEl = null;
+  { const st = document.createElement('style');
+    st.textContent = `.lgpop{position:fixed;z-index:34;pointer-events:none;font:900 18px system-ui;text-shadow:0 0 8px currentColor,0 2px 3px #000;animation:lgUp .9s ease-out forwards}
+      @keyframes lgUp{0%{opacity:0;transform:translate(-50%,-50%) scale(.6)}15%{opacity:1;transform:translate(-50%,-50%) scale(1.15)}100%{opacity:0;transform:translate(-50%,-140%) scale(1)}}
+      .lgbn{position:fixed;left:0;right:0;top:19%;z-index:36;text-align:center;pointer-events:none;font:900 clamp(26px,5.2vw,58px) system-ui;letter-spacing:2px;text-shadow:0 0 18px currentColor,0 0 40px currentColor,0 3px 6px #000;animation:lgBn 1.7s ease-out forwards}
+      .lgbn small{display:block;font:700 clamp(13px,2vw,20px) system-ui;letter-spacing:1px;opacity:.9;margin-top:4px}
+      @keyframes lgBn{0%{opacity:0;transform:scale(.55)}12%{opacity:1;transform:scale(1.18)}25%{transform:scale(1)}78%{opacity:1}100%{opacity:0;transform:scale(1.06) translateY(-14px)}}`;
+    document.head.appendChild(st); }
+  const lgFl = document.createElement('div');
+  Object.assign(lgFl.style, { position: 'fixed', inset: '0', zIndex: '33', pointerEvents: 'none', opacity: '0' }); document.body.appendChild(lgFl);
+  function lgFlash(bg, a, ms) { lgFl.style.transition = 'none'; lgFl.style.background = bg; lgFl.style.opacity = String(a); void lgFl.offsetWidth; lgFl.style.transition = 'opacity ' + ms + 'ms ease-out'; lgFl.style.opacity = '0'; }
+  function lgBanner(text, col, sub) {
+    if (lgBnEl) lgBnEl.remove(); const d = document.createElement('div'); d.className = 'lgbn'; d.style.color = col; d.innerHTML = text + (sub ? '<small>' + sub + '</small>' : '');
+    document.body.appendChild(d); lgBnEl = d; setTimeout(() => { d.remove(); if (lgBnEl === d) lgBnEl = null; }, 1700);
+  }
+  function lgPop(x, y, z, text, col, big) {
+    const now = performance.now(); if (!big && (now - lgPopT < 110 || lgPopN > 7)) return; lgPopT = now;
+    const v = new THREE.Vector3(x, z, y).project(cm); if (v.z > 1 || Math.abs(v.x) > 1.1 || Math.abs(v.y) > 1.1) return;
+    const d = document.createElement('div'); d.className = 'lgpop'; d.textContent = text; d.style.left = ((v.x * 0.5 + 0.5) * innerWidth) + 'px'; d.style.top = ((-v.y * 0.5 + 0.5) * innerHeight) + 'px'; d.style.color = col;
+    if (big) d.style.fontSize = '30px'; document.body.appendChild(d); lgPopN++; setTimeout(() => { d.remove(); lgPopN--; }, 900);
+  }
+  // 입자 (o: col life sz g grow drag coin op orb{cx,cy,ang,rad,av,rv})
+  function lgP(x, y, z, vx, vy, vz, o) {
+    if (lps.length > 380) return;
+    if (o.orb) { x = o.orb.cx + Math.cos(o.orb.ang) * o.orb.rad; y = o.orb.cy + Math.sin(o.orb.ang) * o.orb.rad; }
+    const coin = !!o.coin, m = new THREE.Mesh(coin ? lgGeo.coin : lgGeo.s, coin ? new THREE.MeshBasicMaterial({ color: o.col, transparent: true }) : lgMat(o.col, 1));
+    m.scale.setScalar(o.sz || 2); m.position.set(x, z, y); sc.add(m);
+    lps.push({ m, x, y, z, vx, vy, vz, age: 0, life: o.life || 0.8, sz: o.sz || 2, g: o.g || 0, grow: o.grow || 0, drag: o.drag || 0, coin, sp: rnd(-16, 16), orb: o.orb || null, op: o.op == null ? 1 : o.op });
+  }
+  function lgSpark(x, y, z, col, n) { for (let i = 0; i < n; i++) { const a = rnd(0, 6.283), s = rnd(30, 110); lgP(x, y, z, Math.cos(a) * s, Math.sin(a) * s, rnd(20, 120), { col, life: rnd(0.25, 0.5), sz: rnd(1, 1.8), g: 300 }); } }
+  function lgAdd(T, objs, upd) { if (lgFx.length > 170) return; for (const o of objs) sc.add(o); lgFx.push({ t: T, T, objs, upd }); }
+  function lgRing(x, y, col, r0, r1, T, z, op) {
+    const m = new THREE.Mesh(lgGeo.ring, lgMat(col, op || 0.9)); m.rotation.x = -Math.PI / 2; m.position.set(x, z || 2.5, y); m.scale.setScalar(r0);
+    lgAdd(T, [m], k => { m.scale.setScalar(r0 + (r1 - r0) * (1 - Math.pow(1 - k, 3))); m.material.opacity = (op || 0.9) * (1 - k); });
+  }
+  function lgColumn(x, y, col, rad, h, T, op) {
+    const m = new THREE.Mesh(lgGeo.cy, lgMat(col, op || 0.6)); m.position.set(x, h / 2, y); m.scale.set(rad, h, rad);
+    lgAdd(T, [m], k => { const r = rad * (1 + k * 0.8); m.scale.set(r, h, r); m.material.opacity = (op || 0.6) * (1 - k); });
+  }
+  // 번개: a·b = [x, y(바닥), z(높이)] → 지그재그 선분 (굵은 빛 + 흰 심지)
+  function lgPath(a, b, n, jit) {
+    const pts = []; for (let i = 0; i <= n; i++) { const k = i / n, j = i > 0 && i < n ? jit : 0; pts.push(new THREE.Vector3(a[0] + (b[0] - a[0]) * k + rnd(-j, j), a[2] + (b[2] - a[2]) * k + (j ? rnd(-j, j) * 0.3 : 0), a[1] + (b[1] - a[1]) * k + rnd(-j, j))); }
+    return pts;
+  }
+  function lgSegs(pts, col, th, T) {
+    const gm = lgMat(col, 0.5), cr = lgMat(0xffffff, 1), ms = [];
+    for (let i = 0; i < pts.length - 1; i++) {
+      const a = pts[i], b = pts[i + 1], d = new THREE.Vector3().subVectors(b, a), len = d.length(); if (len < 0.01) continue;
+      const q = new THREE.Quaternion().setFromUnitVectors(_lgUp, d.clone().normalize()), mid = new THREE.Vector3().addVectors(a, b).multiplyScalar(0.5);
+      for (const [mt, w] of [[gm, th * 3], [cr, th]]) { const m = new THREE.Mesh(lgGeo.cy, mt); m.position.copy(mid); m.quaternion.copy(q); m.scale.set(w, len, w); ms.push(m); }
+    }
+    lgAdd(T, ms, k => { gm.opacity = 0.5 * (1 - k); cr.opacity = 1 - k * k; });
+  }
+  function lgSkyBolt(x, y) {
+    const main = lgPath([x + rnd(-40, 40), y + rnd(-40, 40), 520], [x, y, 0], 13, 26); lgSegs(main, 0x8fd8ff, 3.2, 0.45);
+    for (let f = 0; f < 3; f++) { const s = main[2 + Math.floor(Math.random() * 8)]; lgSegs(lgPath([s.x, s.z, s.y], [s.x + rnd(-140, 140), s.z + rnd(-140, 140), Math.max(0, s.y - rnd(90, 200))], 5, 14), 0x8fd8ff, 1.2, 0.35); }
+  }
+
+  // ---- 🌩️ 뇌신: 낙뢰 + 번개 연쇄 + 감전 정지
+  function thunderStrike(x, y) {
+    lgSkyBolt(x, y); lgColumn(x, y, 0x9fe6ff, 9, 520, 0.4, 0.45);
+    lgRing(x, y, 0xe6f6ff, 8, 160, 0.5); lgRing(x, y, 0x5ab8ff, 4, 110, 0.7, 3, 0.7);
+    for (let i = 0; i < 22; i++) { const a = rnd(0, 6.283), s = rnd(60, 260); lgP(x, y, 4, Math.cos(a) * s, Math.sin(a) * s, rnd(60, 220), { col: i % 3 ? 0x9fe6ff : 0xffffff, life: rnd(0.35, 0.75), sz: rnd(1.2, 2.8), g: 520 }); }
+    lgFlash('rgba(200,232,255,1)', 0.5, 280); shake = Math.max(shake, 10); playSound('thunder'); thunderChain(x, y);
+  }
+  function thunderChain(x, y) {
+    const cand = [];
+    for (const p of peds) { if (p.dead > 0) continue; const u = pp(p), d = Math.hypot(u[0] - x, u[1] - y); if (d > 6 && d < 240) cand.push({ d, x: u[0], y: u[1], k: 'p', o: p }); }
+    for (const o of offs) { if (o.dead > 0) continue; const d = Math.hypot(o.x - x, o.y - y); if (d > 6 && d < 240) cand.push({ d, x: o.x, y: o.y, k: 'o', o }); }
+    for (const c of cars) { if (c === P.car || c.disp || c.type !== 'c') continue; const d = Math.hypot(c.x - x, c.y - y); if (d > 6 && d < 240) cand.push({ d, x: c.x, y: c.y, k: 'c', o: c }); }
+    cand.sort((a, b) => a.d - b.d); let px = x, py = y, pz = 14;
+    for (const e of cand.slice(0, 5)) {
+      lgSegs(lgPath([px, py, pz], [e.x, e.y, 12], 6, 9), 0xbfe8ff, 1.1, 0.3); lgSpark(e.x, e.y, 10, 0xbfe8ff, 5);
+      if (e.k === 'p') hitPed(e.o, true);
+      else if (e.k === 'o') { e.o.hp -= 80; e.o.fz = Math.max(e.o.fz || 0, 1.5); if (e.o.hp <= 0) { const j = offs.indexOf(e.o); if (j >= 0) killOff(j); } }
+      else { dmgCar(e.o, 80); if (cars.includes(e.o)) { e.o.stun = Math.max(e.o.stun || 0, 1.5); e.o.v *= 0.2; } }
+      px = e.x; py = e.y; pz = 12;
+    }
+  }
+
+  // ---- 👑 미다스: 금화 · 금액 팝업 · 잭팟(금화 비 + 황금 기둥)
+  function midasFx(x, y, z, jp) {
+    for (let i = 0; i < (jp ? 70 : 6); i++) { const a = rnd(0, 6.283), s = rnd(30, jp ? 240 : 90); lgP(x, y, z, Math.cos(a) * s, Math.sin(a) * s, rnd(120, jp ? 380 : 230), { col: 0xffc933, coin: true, life: rnd(1, 1.6), g: 560 }); }
+    for (let i = 0; i < (jp ? 30 : 5); i++) { const a = rnd(0, 6.283), s = rnd(20, 150); lgP(x, y, z, Math.cos(a) * s, Math.sin(a) * s, rnd(20, 200), { col: 0xfff2a0, life: rnd(0.4, 0.9), sz: rnd(1, 2.2), g: 120, grow: -0.6 }); }
+    if (jp) {
+      lgRing(x, y, 0xffd23f, 10, 240, 0.7); lgRing(x, y, 0xfff2a0, 6, 150, 0.5, 4); lgColumn(x, y, 0xffd23f, 12, 420, 0.8, 0.5); lgRain = { x, y, t: 1.6 };
+      lgFlash('rgba(255,214,70,1)', 0.38, 600); shake = Math.max(shake, 7); lgBanner('👑 JACKPOT!', '#ffd23f', '+$50,000'); lgPop(x, y, z + 14, '+$50,000', '#fff2a0', true); playSound('jackpot');
+    }
+  }
+
+  // ---- 🌌 공허: 공허의 균열 (15초 · 최대 3개) · 소멸 시 대폭발
+  const voidCount = () => { let n = 0; for (const w of wells) if (w.vd) n++; return n; };
+  function voidAdd(x, y) {
+    const z = 36, mk = (geo, mt) => new THREE.Mesh(geo, mt);
+    const m = mk(new THREE.SphereGeometry(1, 16, 16), new THREE.MeshBasicMaterial({ color: 0x000000 }));
+    const rg = mk(new THREE.TorusGeometry(1, 0.1, 8, 40), new THREE.MeshBasicMaterial({ color: 0xc27bff, transparent: true, opacity: 0.9 }));
+    const rg2 = mk(new THREE.TorusGeometry(1, 0.06, 8, 40), lgMat(0xff4df0, 0.8)), rg3 = mk(new THREE.TorusGeometry(1, 0.05, 8, 40), lgMat(0x6fd8ff, 0.7));
+    const halo = mk(new THREE.SphereGeometry(1, 16, 16), lgMat(0x7a2cff, 0.28)), gr = mk(lgGeo.ring, lgMat(0xa65cff, 0.3)); gr.rotation.x = -Math.PI / 2;
+    for (const o of [m, rg, rg2, rg3, halo, gr]) { o.position.set(x, o === gr ? 2.5 : z, y); o.scale.setScalar(0.01); sc.add(o); }
+    wells.push({ x, y, z, t: 15, T0: 15, long: 0, vd: 1, m, rg, rg2, rg3, halo, gr, ex: [rg2, rg3, halo, gr] });
+    lgRing(x, y, 0xc27bff, 10, 260, 0.8); lgFlash('rgba(60,10,110,1)', 0.45, 700); shake = Math.max(shake, 6); lgBanner('🌌 공허의 균열', '#c9a0ff'); playSound('void');
+  }
+  function voidVis(w, k) {
+    const c = Math.min(1, w.t / 0.7) * k;
+    w.m.scale.setScalar(13 * c * (1 + Math.sin(T * 14) * 0.06)); w.halo.scale.setScalar(27 * c * (1 + Math.sin(T * 6) * 0.08));
+    w.rg.rotation.set(Math.PI / 2.3, 0, T * 5); w.rg.scale.setScalar(40 * c);
+    w.rg2.rotation.set(Math.PI / 2 + 0.6, T * 3, 0); w.rg2.scale.setScalar(54 * c);
+    w.rg3.rotation.set(0.5, T * 2.2, T * 4); w.rg3.scale.setScalar(68 * c);
+    w.gr.scale.setScalar(340 * c * (1 + Math.sin(T * 5) * 0.02)); w.gr.material.opacity = 0.22 + 0.12 * Math.sin(T * 6);
+    if (lps.length < 330 && k >= 1) for (let n = 0; n < 3; n++) {
+      const r = rnd(130, 330), z0 = w.z + rnd(-30, 30);
+      lgP(0, 0, z0, 0, 0, (w.z - z0) / 0.85, { col: [0xc27bff, 0xff4df0, 0x6fd8ff][n % 3], life: 0.85, sz: rnd(1.6, 3), orb: { cx: w.x, cy: w.y, ang: rnd(0, 6.283), rad: r, av: 2.8, rv: -r / 0.85 } });
+    }
+  }
+  function voidEnd(w) {
+    boom(w.x, w.y, 170, 260); lgRing(w.x, w.y, 0xffffff, 10, 300, 0.6); lgRing(w.x, w.y, 0xc27bff, 10, 230, 0.9, 3);
+    for (let i = 0; i < 40; i++) { const a = rnd(0, 6.283), s = rnd(80, 320); lgP(w.x, w.y, w.z, Math.cos(a) * s, Math.sin(a) * s, rnd(-60, 200), { col: i % 2 ? 0xc27bff : 0xff4df0, life: rnd(0.5, 1), sz: rnd(1.6, 3.2), g: 160, drag: 1.2 }); }
+    lgFlash('rgba(235,215,255,1)', 0.55, 500); shake = Math.max(shake, 14); playSound('implode');
+  }
+
+  // ---- ⏳ 시간 지배: 시간 정지 (경찰·경찰차·헬기·미사일 3초 정지 · 총알은 맞아요)
+  function timeTick() { for (let n = 0; n < 2; n++) lgP(P.x + rnd(-8, 8), P.y + rnd(-8, 8), 8 + (P.z || 0) + rnd(0, 8), 0, 0, rnd(20, 60), { col: 0x7fe0ff, life: 0.5, sz: 1.5, grow: -0.7 }); }
+  function lgClock(x, y) {
+    const g = new THREE.Group(), R = 300, mats = [], mk = (geo, col, op) => { const mt = lgMat(col, op); mats.push([mt, op]); return new THREE.Mesh(geo, mt); };
+    for (const [col, op, sc2] of [[0x7fe0ff, 0.8, R], [0xffffff, 0.5, R * 0.93]]) { const r = mk(lgGeo.ring, col, op); r.rotation.x = -Math.PI / 2; r.scale.setScalar(sc2); g.add(r); }
+    for (let i = 0; i < 12; i++) { const a = i / 12 * 6.283, t = mk(lgGeo.box, 0xbff3ff, 0.9); t.position.set(Math.cos(a) * R * 0.86, 0, Math.sin(a) * R * 0.86); t.scale.set(i % 3 === 0 ? 26 : 14, 2, 4); t.rotation.y = -a; g.add(t); }
+    const hand = (len, th, col) => { const p = new THREE.Group(), h = mk(lgGeo.box, col, 0.95); h.scale.set(len, 2, th); h.position.x = len / 2; p.add(h); g.add(p); return p; };
+    const hm = hand(R * 0.78, 5, 0x7fe0ff), hh = hand(R * 0.5, 8, 0xffffff); g.position.set(x, 3, y);
+    lgAdd(3.0, [g], k => { g.scale.setScalar(0.3 + 0.7 * Math.min(1, k * 4)); const sp = 1 - Math.min(1, k * 1.5), ang = sp * sp * 20; hm.rotation.y = ang; hh.rotation.y = ang / 12 + 1; const f = k < 0.65 ? 1 : (1 - k) / 0.35; for (const [mt, op] of mats) mt.opacity = op * f; });
+  }
+  function timeWarp() {
+    const n = performance.now(); if (n - lgTwT < 9000) return; lgTwT = n;
+    const R = 480; let c = 0;
+    for (const o of offs) if (Math.hypot(o.x - P.x, o.y - P.y) < R) { o.fz = 3; c++; }
+    for (const car of cars) if (car.type === 'c' && car !== P.car && !car.disp && Math.hypot(car.x - P.x, car.y - P.y) < R) { car.stun = Math.max(car.stun || 0, 3); car.v *= 0.1; c++; }
+    lgFrz = 3; lgClock(P.x, P.y); lgRing(P.x, P.y, 0x7fe0ff, 20, 480, 1.1);
+    lgFlash('radial-gradient(circle at 50% 50%, rgba(120,200,255,0) 25%, rgba(30,70,150,.75) 100%)', 1, 3000);
+    lgBanner('⏳ 시간 정지', '#7fe0ff', c ? c + '명 정지' : ''); playSound('warp'); shake = Math.max(shake, 5);
+  }
+
+  // ---- 매 프레임: 입자 · 이펙트 · 들고 있는 동안의 오라
+  function lgUpd(dt) {
+    if (lgFrz > 0) lgFrz -= dt;
+    for (let i = lps.length - 1; i >= 0; i--) {
+      const p = lps[i]; p.age += dt; const k = p.age / p.life;
+      if (p.orb) { const q = p.orb; q.ang += q.av * dt; q.rad += q.rv * dt; p.x = q.cx + Math.cos(q.ang) * q.rad; p.y = q.cy + Math.sin(q.ang) * q.rad; p.z += p.vz * dt; if (q.rad < 4) p.age = p.life; }
+      else { p.vz -= p.g * dt; if (p.drag) { const f = Math.max(0, 1 - p.drag * dt); p.vx *= f; p.vy *= f; } p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt; }
+      if (p.coin) { if (p.z < 2.5) { p.z = 2.5; p.vz = Math.abs(p.vz) > 40 ? Math.abs(p.vz) * 0.42 : 0; p.vx *= 0.6; p.vy *= 0.6; } p.m.rotation.x += p.sp * dt; p.m.rotation.z += p.sp * 0.6 * dt; if (k > 0.75) p.m.material.opacity = Math.max(0, (1 - k) * 4); }
+      else { p.m.material.opacity = p.op * Math.max(0, 1 - k); p.m.scale.setScalar(Math.max(0.05, p.sz * (1 + p.grow * k))); }
+      p.m.position.set(p.x, p.z, p.y);
+      if (k >= 1) { sc.remove(p.m); p.m.material.dispose(); lps.splice(i, 1); }
+    }
+    for (let i = lgFx.length - 1; i >= 0; i--) {
+      const f = lgFx[i]; f.t -= dt; f.upd(Math.min(1, 1 - f.t / f.T), dt);
+      if (f.t <= 0) { for (const o of f.objs) { sc.remove(o); o.traverse(c => { if (c.material) c.material.dispose(); }); } lgFx.splice(i, 1); }
+    }
+    if (lgRain) { lgRain.t -= dt; for (let n = 0; n < 2; n++) lgP(lgRain.x + rnd(-170, 170), lgRain.y + rnd(-170, 170), rnd(220, 320), 0, 0, -120, { col: 0xffc933, coin: true, life: 1.4, g: 300 }); if (lgRain.t <= 0) lgRain = null; }
+    let id = null; try { id = (P.onFoot && !activeInterior) ? MP.lg() : null; } catch (e) {}
+    lgAuraT -= dt; const zz = (P.z || 0);
+    if (id && lgAuraT <= 0) {
+      if (id === 'l_thunder') { lgAuraT = 0.16; const a = rnd(0, 6.283), a2 = a + rnd(-1, 1), r2 = rnd(24, 38); lgSegs(lgPath([P.x + Math.cos(a) * 10, P.y + Math.sin(a) * 10, 4 + zz], [P.x + Math.cos(a2) * r2, P.y + Math.sin(a2) * r2, 4 + zz + rnd(0, 26)], 4, 5), 0x8fd8ff, 0.35, 0.13); }
+      else if (id === 'l_midas') { lgAuraT = 0.07; lgP(P.x + rnd(-12, 12), P.y + rnd(-12, 12), zz + rnd(2, 16), 0, 0, rnd(25, 55), { col: 0xffd23f, life: 0.9, sz: 1.5, grow: -0.6 }); }
+      else if (id === 'l_void') { lgAuraT = 0.09; lgP(0, 0, zz + rnd(2, 18), 0, 0, rnd(-6, 10), { col: Math.random() < 0.5 ? 0xc27bff : 0xff4df0, life: 0.75, sz: 1.6, orb: { cx: P.x, cy: P.y, ang: rnd(0, 6.283), rad: rnd(20, 28), av: 5.5, rv: -7 } }); }
+      else if (id === 'l_time') lgAuraT = 0.25;
+    }
+    if (id === 'l_time') {
+      if (!lgTA) {
+        lgTA = new THREE.Group(); const r1 = new THREE.Mesh(lgGeo.ring, lgMat(0x7fe0ff, 0.55)); r1.rotation.x = -Math.PI / 2; r1.scale.setScalar(26); lgTA.add(r1);
+        for (let i = 0; i < 12; i++) { const a = i / 12 * 6.283, t = new THREE.Mesh(lgGeo.box, lgMat(0xbff3ff, 0.8)); t.position.set(Math.cos(a) * 30, 0, Math.sin(a) * 30); t.scale.set(i % 3 === 0 ? 7 : 4, 0.8, 1.2); t.rotation.y = -a; lgTA.add(t); }
+        const hd = new THREE.Mesh(lgGeo.box, lgMat(0xffffff, 0.7)); hd.scale.set(24, 0.8, 1.4); hd.position.x = 12; lgTA.add(hd); sc.add(lgTA);
+      }
+      lgTA.visible = true; lgTA.position.set(P.x, zz + 1.5, P.y); lgTA.rotation.y = -T * 2.2;
+    } else if (lgTA) lgTA.visible = false;
   }
   const stks = [];
   function stkAdd(b) {
@@ -2124,6 +2311,7 @@
     for (let i = offs.length - 1; i >= 0; i--) {
       const o = offs[i];
       if (o.dead > 0) { o.dead -= dt; if (o.dead <= 0) o.m.rotation.z = 0; else continue; }
+      if (o.fz > 0) { o.fz -= dt; o.cd = Math.max(o.cd, 0.6); o.m.position.set(o.x, 0, o.y); continue; }   // v22 시간 정지·감전: 멈추지만 총알은 맞아요
       o.t -= dt * (heat <= 0 ? 3 : 1); const dx = tg.x - o.x, dy = tg.y - o.y, d = Math.hypot(dx, dy) || 1;
       if (o.t <= 0 || d > 900) { sc.remove(o.m); offs.splice(i, 1); continue; }
       o.a = Math.atan2(dy, dx);
@@ -2138,7 +2326,7 @@
     }
 
     for (let i = tz.length - 1; i >= 0; i--) {
-      const z = tz[i]; z.t -= dt; z.x += z.dx * 520 * dt; z.y += z.dy * 520 * dt; let dead = z.t <= 0 || solid(z.x, z.y, 0);
+      const z = tz[i], zf = lgFrz > 0 ? 0.04 : 1; z.t -= dt * (lgFrz > 0 ? 0.1 : 1); z.x += z.dx * 520 * dt * zf; z.y += z.dy * 520 * dt * zf; let dead = z.t <= 0 || solid(z.x, z.y, 0);
       if (!dead && P.onFoot && tased <= 0 && Math.hypot(P.x - z.x, P.y - z.y) < 11) {
         dead = true; tased = 1.6; bust = Math.min(1.69, bust + 0.6); shake = 8; msg('테이저 피격!');
       }
@@ -2154,13 +2342,13 @@
       }
     }
     for (let i = hms.length - 1; i >= 0; i--) {
-      const q = hms[i]; q.t -= dt; q.x += q.vx * dt; q.y += q.vy * dt; q.z += q.vz * dt; let dead = q.t <= 0 || q.z < 1 || (q.z < bh(q.x, q.y));
+      const q = hms[i], qf = lgFrz > 0 ? 0.04 : 1; q.t -= dt * (lgFrz > 0 ? 0.1 : 1); q.x += q.vx * dt * qf; q.y += q.vy * dt * qf; q.z += q.vz * dt * qf; let dead = q.t <= 0 || q.z < 1 || (q.z < bh(q.x, q.y));
       if (!dead && Math.hypot(tg.x - q.x, tg.y - q.y) < 26 && Math.abs((tg.z || 0) + 8 - q.z) < 26) {
         dead = true; if (!MP.god()) { shake = 12; msg('🚁 헬기 미사일 직격!'); if (P.onFoot) { tased = Math.max(tased, 1.4); bust = Math.min(1.69, bust + 0.5); } else if (P.car) P.car.hp -= 30 * (P.car.arm ? 1 / P.car.arm : 1); } playSound('boom');
       }
       q.m.position.set(q.x, q.z, q.y); if (dead) { sc.remove(q.m); hms.splice(i, 1); }
     }
-    collide(); jackUpd(dt, tg); fireResponse(dt); flameUpd(dt); wellUpd(dt); napUpd(dt); stkUpd(dt); orbUpd(dt);
+    collide(); jackUpd(dt, tg); fireResponse(dt); flameUpd(dt); wellUpd(dt); napUpd(dt); stkUpd(dt); orbUpd(dt); lgUpd(dt);
     for (const j of jets) j.scale.y = 0.75 + Math.abs(Math.sin(T * 4)) * 0.4;
     for (const f of foam) { f.ph += dt * 0.9; const o = Math.sin(f.ph) * 26; f.m.position.x = f.bx + f.nx * o; f.m.position.z = f.bz + f.nz * o; f.m.material.opacity = 0.3 + Math.abs(Math.cos(f.ph)) * 0.3; }
     for (const s of sees) s.rotation.z = Math.sin(T * 1.3 + s.userData.ph) * 0.3;
@@ -3839,7 +4027,7 @@
         else if (id === 'storm') r.chain = r.chain || (Math.random() < v ? 1 : 0);
         else if (id === 'haste') r.cdm *= v;
         else if (id === 'ghost') r.stl *= v;
-        else if (id === 'l_time') { r.cdm *= 0.5; r.crit = r.crit || Math.random() < 0.3; r.free = r.free || Math.random() < 0.25; }
+        else if (id === 'l_time') { r.cdm *= 0.4; r.crit = r.crit || Math.random() < 0.4; r.free = r.free || Math.random() < 0.35; timeTick(); if (Math.random() < 0.06) timeWarp(); }
         else if (e.d.t === 'hit') (r.hit = r.hit || []).push({ id, v, lv: e.lv });
       }
       return r;
@@ -3855,9 +4043,9 @@
         else if (k === 'o') { const j = offs.indexOf(t); if (j >= 0) { t.dead = Math.max(t.dead || 0, v); t.m.rotation.z = Math.PI / 2; } }
       }
       else if (id === 'well') { if (Math.random() < v && now - enGate > 2000) { enGate = now; wellAdd(b.x, b.y, 14); } }
-      else if (id === 'l_thunder') { if (Math.random() < v && now - enGate > 300) { enGate = now; boom(b.x, b.y, 85, 120); playSound('boom'); if (k === 'v') pvpHit(t, 40, 9); } }
-      else if (id === 'l_midas') { money += v; if (Math.random() < 0.08) { money += 25000; msg('👑 미다스 잭팟! +$25,000'); playSound('cash'); } else if (now - enGate > 400) { enGate = now; playSound('cash'); } }
-      else if (id === 'l_void') { if (Math.random() < v && now - enGate > 3500) { enGate = now; wellAdd(b.x, b.y, 60, 1); } }
+      else if (id === 'l_thunder') { lgSpark(b.x, b.y, b.z, 0x9fe6ff, 4); if (Math.random() < v && now - enGate > 250) { enGate = now; thunderStrike(b.x, b.y); boom(b.x, b.y, 110, 170); if (k === 'v') pvpHit(t, 60, 9); } }
+      else if (id === 'l_midas') { money += v; if (Math.random() < 0.12) { money += 50000; midasFx(b.x, b.y, b.z, true); } else { midasFx(b.x, b.y, b.z, false); lgPop(b.x, b.y, b.z + 8, '+$' + v.toLocaleString(), '#ffd23f'); if (now - enGate > 400) { enGate = now; playSound('cash'); } } }
+      else if (id === 'l_void') { lgSpark(b.x, b.y, b.z, 0xc27bff, 3); if (Math.random() < v && now - enGate > 2500 && voidCount() < 3) { enGate = now; voidAdd(b.x, b.y); } }
       if (k === 'v') {   // 🧑 PvP: 맞은 플레이어에게도 인첸트 효과
         if (id === 'frost') pvpHit(t, 0, 4);                                  // 빙결 = 스턴
         else if (id === 'blast') { if (Math.random() < v) pvpHit(t, 8 + e.lv * 8, 9); }   // 폭렬 추가 피해
@@ -3870,8 +4058,8 @@
         else if (k === 'c' && t.type === 'c' && cars.includes(t) && t.hp <= (t.mhp || 100) * v) dmgCar(t, 99999);
       }
     }
-    const relMul = () => (1 / enProd(wi, 'reload')) * (enAll(wi).some(e => e.d.id === 'l_time') ? 1 / 0.3 : 1);
-    const swiftMul = () => P.onFoot ? enProd(wi, 'swift') * (enAll(wi).some(e => e.d.id === 'l_time') ? 1.25 : 1) : 1;
+    const relMul = () => (1 / enProd(wi, 'reload')) * (enAll(wi).some(e => e.d.id === 'l_time') ? 1 / 0.2 : 1);
+    const swiftMul = () => P.onFoot ? enProd(wi, 'swift') * (enAll(wi).some(e => e.d.id === 'l_time') ? 1.4 : 1) : 1;
     let panel = null, wpBusy = false, stNear = null, ghCd = 0;
     const v4css = document.createElement('style');
     v4css.textContent = `.v4p{position:fixed;inset:0;z-index:61;display:none;align-items:center;justify-content:center;background:rgba(5,7,12,.66);font-family:system-ui}
@@ -4037,6 +4225,7 @@
             + `<div class="ds" style="flex-basis:100%;margin:0">${e.ic} ${e.n} ${[1, 2, 3].map(l => `<b${(cur && cur[0] === sel && cur[1] === l) ? ' style="color:#ffd23f"' : ''}>Lv${l}</b>: ${e.d(e.v[l - 1])}`).join(' · ')}</div></div>`;
         }
         h += '<div class="ds" style="text-align:center;margin-top:6px">새 인첸트를 부여할 때마다 10% 확률로 👑 레전드 인첸트(뇌신·미다스·공허·시간 지배)가 대신 붙어요 · 다른 인첸트로 교체하면 기존 인첸트는 사라져요 · 인첸트는 경매에 팔 때 무기와 함께 가요</div>';
+        h += '<div class="ds" style="margin:12px 0 4px;font-weight:800;color:#ffd23f;font-size:13px">👑 레전드 인첸트 도감</div>' + ENCH.filter(e => e.leg).map(e => `<div class="row"><div class="nm">${e.ic} ${e.n}<div class="ds">${e.d(e.v[0])}</div></div></div>`).join('');
       } else {
         const mx = lv >= ENH_MAX;
         h += `<div class="row"><div class="nm">${esc(WP[w].n)} <span style="color:#ffb347">${lv ? '+' + lv : ''}</span><div class="ds">${mx ? 'MAX 강화 완료 (+99)' : `성공 ${enhChance(lv)}% · 비용 ${fmt(enhCost(lv))}${ENH_DROP(lv) ? ' · 실패 시 −1단계' : ''}`} · 데미지 ×${dmgMul(lv).toFixed(2)} · 연사 ×${(1 / cdMul(lv)).toFixed(2)}</div></div><div class="btn o${mx || money < enhCost(lv) ? ' dis' : ''}" data-i="1">${mx ? 'MAX' : '강화'}</div></div>`;
@@ -4949,7 +5138,7 @@
     refreshUI();
     setTimeout(() => { if (!raidResume()) go(myCode); }, 300);
     setInterval(() => { if (lastD && performance.now() - lastForce > 2500) { lastForce = performance.now(); send('s', lastD); } }, 2500);
-    return { tick, hud, mini, wlv, station, shot, hall: () => hall, raid: () => !!raid, raidWant, raidHeli, raidTank, raidSpeed, raidKill, raidCanRob: () => !!raid && raid.ph === 'stl', raidRob, raidBusted, abHole: (x, y) => wellAdd(x, y, 60, 1), nitro: () => nitroT > 0, has: k => !!own[k], pvpOn, pvpCone, pvpRad, pvpRay, boom: boomEv, loot, rideKey, bulletHit, martial: martialEv, busted: bustedEv, dbg: () => ({ last: lastD, st: status, host: isHost(), hostId: hostId(), me: myId, rem: [...remotes.values()].map(r => ({ id: r.id, x: r.x | 0, y: r.y | 0, z: r.z | 0, onFoot: r.onFoot, kind: r.kind, nid: r.nid, drv: !!r.drvC, rd: r.rd, inMap: nidMap.has(r.nid), isP: nidMap.get(r.nid) === P.car, inCars: cars.some(c => c.nid === r.nid) })) }), locked: () => locked, riding: () => !!ride, aimA, aimVz: (v, z0) => v * aimSl(z0), aimSl, god: () => god > 0, jv: () => jumpT > 0 ? 600 : 230, spd: () => (spdT > 0 ? 2 : 1) * (jpOn ? 1.6 : 1) * swiftMul(), fx: fxShot, enHit, relMul, enTag, phys, pS: pSolid, jump: doJump };
+    return { tick, hud, mini, wlv, station, shot, hall: () => hall, raid: () => !!raid, raidWant, raidHeli, raidTank, raidSpeed, raidKill, raidCanRob: () => !!raid && raid.ph === 'stl', raidRob, raidBusted, abHole: (x, y) => wellAdd(x, y, 60, 1), nitro: () => nitroT > 0, has: k => !!own[k], pvpOn, pvpCone, pvpRad, pvpRay, boom: boomEv, loot, rideKey, bulletHit, martial: martialEv, busted: bustedEv, dbg: () => ({ last: lastD, st: status, host: isHost(), hostId: hostId(), me: myId, rem: [...remotes.values()].map(r => ({ id: r.id, x: r.x | 0, y: r.y | 0, z: r.z | 0, onFoot: r.onFoot, kind: r.kind, nid: r.nid, drv: !!r.drvC, rd: r.rd, inMap: nidMap.has(r.nid), isP: nidMap.get(r.nid) === P.car, inCars: cars.some(c => c.nid === r.nid) })) }), locked: () => locked, riding: () => !!ride, aimA, aimVz: (v, z0) => v * aimSl(z0), aimSl, god: () => god > 0, jv: () => jumpT > 0 ? 600 : 230, spd: () => (spdT > 0 ? 2 : 1) * (jpOn ? 1.6 : 1) * swiftMul(), fx: fxShot, enHit, relMul, enTag, lg: () => { const e = enAll(wi).find(x => x.d.leg); return e ? e.d.id : null; }, lgNote: i => { const e = enAll(i).find(x => x.d.leg); return e ? ` · ${e.d.ic}${e.d.n}: ${e.d.s}` : ''; }, phys, pS: pSolid, jump: doJump };
   })();
 
   let last = performance.now();
