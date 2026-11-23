@@ -4111,7 +4111,7 @@
     let enGate = 0;
     function fxShot(i) {   // 발사할 때마다 한 번 호출 → 이번 발사에 적용되는 인첸트 효과
       const r = { free: false, crit: false, split: 0, pr: 0, thru: 0, chain: 0, cdm: 1, stl: 1, hit: null };
-      const seenL = {};
+      const seenL = {}; lgSNow = lgS();   // 발사 시작 시점의 겹침 상태를 먼저 읽어요 (합일 중엔 개별 타이틀 억제)
       for (const e of enAll(i)) {
         const id = e.d.id, v = e.v;
         if (e.d.leg) { if (seenL[id]) continue; seenL[id] = 1; }   // 같은 레전드를 여러 개 박아도 한 번만 적용
