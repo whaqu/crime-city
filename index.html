@@ -1667,23 +1667,28 @@
   const lgGeo = { s: new THREE.SphereGeometry(1, 8, 8), cy: new THREE.CylinderGeometry(1, 1, 1, 6, 1, true), coin: new THREE.CylinderGeometry(2.6, 2.6, 0.7, 10), ring: new THREE.RingGeometry(0.88, 1, 48), box: new THREE.BoxGeometry(1, 1, 1) };
   const lgMat = (col, op) => new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: op == null ? 1 : op, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
   const lps = [], lgFx = [], _lgUp = new THREE.Vector3(0, 1, 0);
-  let lgSNow = { n: 0 }, lgAN = 0, lgCv = 0, lgN = 0, lgFrz = 0, lgTwT = 0, lgAuraT = 0, lgPopT = 0, lgPopN = 0, lgRain = null, lgTA = null, lgBnEl = null;
+  let lgFuI = 0, lgBigT = 0, lgFuEl = null, lgSNow = { n: 0 }, lgAN = 0, lgCv = 0, lgN = 0, lgFrz = 0, lgTwT = 0, lgAuraT = 0, lgPopT = 0, lgPopN = 0, lgRain = null, lgTA = null, lgBnEl = null;
   { const st = document.createElement('style');
     st.textContent = `.lgpop{position:fixed;z-index:34;pointer-events:none;font:900 18px system-ui;text-shadow:0 0 8px currentColor,0 2px 3px #000;animation:lgUp .9s ease-out forwards}
       @keyframes lgUp{0%{opacity:0;transform:translate(-50%,-50%) scale(.6)}15%{opacity:1;transform:translate(-50%,-50%) scale(1.15)}100%{opacity:0;transform:translate(-50%,-140%) scale(1)}}
       .lgbn{position:fixed;left:0;right:0;top:19%;z-index:36;text-align:center;pointer-events:none;font:900 clamp(26px,5.2vw,58px) system-ui;letter-spacing:2px;text-shadow:0 0 18px currentColor,0 0 40px currentColor,0 3px 6px #000;animation:lgBn 1.7s ease-out forwards}
+      .lgfu{position:fixed;left:0;right:0;top:13%;z-index:37;text-align:center;pointer-events:none;animation:lgFu 2.5s ease-out forwards}
+      .lgfu b{display:inline-block;font:900 clamp(34px,8vw,96px) system-ui;letter-spacing:6px;background:linear-gradient(90deg,#8fd8ff,#fff2a0 30%,#ffd23f 50%,#c27bff 72%,#7fe0ff);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 16px rgba(255,214,90,.95)) drop-shadow(0 5px 7px #000)}
+      .lgfu small{display:block;margin-top:10px;font:800 clamp(12px,2.1vw,22px) system-ui;color:#fff;letter-spacing:2px;text-shadow:0 0 10px #ffd23f,0 2px 4px #000}
+      @keyframes lgFu{0%{opacity:0;transform:scale(2.3);letter-spacing:34px}13%{opacity:1;transform:scale(1)}82%{opacity:1}100%{opacity:0;transform:scale(1.08) translateY(-20px)}}
       .lgbn small{display:block;font:700 clamp(13px,2vw,20px) system-ui;letter-spacing:1px;opacity:.9;margin-top:4px}
       @keyframes lgBn{0%{opacity:0;transform:scale(.55)}12%{opacity:1;transform:scale(1.18)}25%{transform:scale(1)}78%{opacity:1}100%{opacity:0;transform:scale(1.06) translateY(-14px)}}`;
     document.head.appendChild(st); }
   const lgFl = document.createElement('div');
   Object.assign(lgFl.style, { position: 'fixed', inset: '0', zIndex: '33', pointerEvents: 'none', opacity: '0' }); document.body.appendChild(lgFl);
-  function lgFlash(bg, a, ms) { lgFl.style.transition = 'none'; lgFl.style.background = bg; lgFl.style.opacity = String(a); void lgFl.offsetWidth; lgFl.style.transition = 'opacity ' + ms + 'ms ease-out'; lgFl.style.opacity = '0'; }
-  function lgBanner(text, col, sub) {
+  function lgFlash(bg, a, ms, force) { if (!force && lgSNow.n === 4) return; lgFl.style.transition = 'none'; lgFl.style.background = bg; lgFl.style.opacity = String(a); void lgFl.offsetWidth; lgFl.style.transition = 'opacity ' + ms + 'ms ease-out'; lgFl.style.opacity = '0'; }
+  function lgBanner(text, col, sub, force) {
+    if (!force && lgSNow.n === 4) return;   // 레전드 합일 중에는 개별 타이틀을 끄고 합일 타이틀만 보여요
     if (lgBnEl) lgBnEl.remove(); const d = document.createElement('div'); d.className = 'lgbn'; d.style.color = col; d.innerHTML = text + (sub ? '<small>' + sub + '</small>' : '');
     document.body.appendChild(d); lgBnEl = d; setTimeout(() => { d.remove(); if (lgBnEl === d) lgBnEl = null; }, 1700);
   }
-  function lgPop(x, y, z, text, col, big) {
-    const now = performance.now(); if (!big && (now - lgPopT < 110 || lgPopN > 7)) return; lgPopT = now;
+  function lgPop(x, y, z, text, col, big, force) {
+    const now = performance.now(); if (!big && (now - lgPopT < 110 || lgPopN > 7)) return; if (big && !force && lgSNow.n === 4 && now - lgBigT < 600) return; if (big) lgBigT = now; lgPopT = now;
     const v = new THREE.Vector3(x, z, y).project(cm); if (v.z > 1 || Math.abs(v.x) > 1.1 || Math.abs(v.y) > 1.1) return;
     const d = document.createElement('div'); d.className = 'lgpop'; d.textContent = text; d.style.left = ((v.x * 0.5 + 0.5) * innerWidth) + 'px'; d.style.top = ((-v.y * 0.5 + 0.5) * innerHeight) + 'px'; d.style.color = col;
     if (big) d.style.fontSize = '30px'; document.body.appendChild(d); lgPopN++; setTimeout(() => { d.remove(); lgPopN--; }, 900);
@@ -1760,8 +1765,22 @@
     else { dmgCar(o, dmg); if (cars.includes(o)) { o.stun = Math.max(o.stun || 0, 1.2); o.v *= 0.2; } }
   }
   function lgCoins(x, y, z, n, spd) { for (let i = 0; i < n; i++) { const a = rnd(0, 6.283), v = rnd(30, spd); lgP(x, y, z, Math.cos(a) * v, Math.sin(a) * v, rnd(120, 340), { col: 0xffc933, coin: true, life: rnd(1, 1.5), g: 560 }); } }
-  // 🔗 레전드 합일: 4개를 전부 겹친 무기의 4번째 발사마다
+  function lgFuBanner(title, sub) {
+    if (lgFuEl) lgFuEl.remove(); const d = document.createElement('div'); d.className = 'lgfu'; d.innerHTML = '<b>' + title + '</b><small>' + sub + '</small>';
+    document.body.appendChild(d); lgFuEl = d; setTimeout(() => { d.remove(); if (lgFuEl === d) lgFuEl = null; }, 2500);
+  }
+  function lgDelay(sec, fn) { let done = false; lgAdd(sec, [], k => { if (k >= 1 && !done) { done = true; fn(); } }); }
+  // 🔗 레전드 합일: 4개를 전부 겹친 무기의 4번째 발사마다 → ① 타이틀 + 충전(4색이 한 점으로 모임) ② 0.45초 뒤 합쳐진 공격
+  const LG_FU = ['천지개벽', '시공 붕괴', '종말의 심판', '신화 강림'];
   function lgConverge(x, y) {
+    const nm = LG_FU[lgFuI++ % LG_FU.length], cols = [0x8fd8ff, 0xffd23f, 0xc27bff, 0x7fe0ff];
+    lgFuBanner('👑 ' + nm, '⚡ 뇌신 · 💰 미다스 · 🌌 공허 · ⏳ 시간 지배 — 레전드 합일');
+    lgFlash('rgba(8,4,28,1)', 0.5, 450, true); playSound('warp'); shake = Math.max(shake, 6);
+    cols.forEach((c, i) => { lgRing(x, y, c, 250 - i * 20, 24, 0.45, 3 + i * 1.4, 0.85); for (let n = 0; n < 8; n++) lgP(0, 0, rnd(8, 70), 0, 0, rnd(-20, 60), { col: c, life: 0.45, sz: rnd(1.8, 3.2), orb: { cx: x, cy: y, ang: rnd(0, 6.283), rad: rnd(120, 190), av: 7, rv: -300 } }); });
+    lgColumn(x, y, 0xffffff, 6, 720, 0.45, 0.35);
+    lgDelay(0.45, () => lgFuse(x, y));
+  }
+  function lgFuse(x, y) {
     const cols = [0x8fd8ff, 0xffd23f, 0xc27bff, 0x7fe0ff];
     lgSkyBolt(x, y, 0xffffff); lgSkyBolt(x + 34, y - 22, 0xffd23f); lgSkyBolt(x - 34, y + 22, 0xc27bff);
     cols.forEach((c, i) => lgRing(x, y, c, 10, 190 + i * 80, 0.8 + i * 0.15, 3 + i * 1.6, 0.85));
@@ -1770,8 +1789,7 @@
     for (let i = 0; i < 70; i++) { const a = rnd(0, 6.283), v = rnd(80, 340); lgP(x, y, 6, Math.cos(a) * v, Math.sin(a) * v, rnd(60, 300), { col: cols[i % 4], life: rnd(0.5, 1.1), sz: rnd(1.4, 3.4), g: 380 }); }
     boom(x, y, 270, 520); MP.pvpRad(x, y, 200, 70, 9); thunderChain(x, y);
     money += 20000; voidAdd(x, y); timeWarp();
-    lgFlash('rgba(255,250,225,1)', 0.75, 700); shake = Math.max(shake, 20); playSound('converge');
-    lgBanner('👑 레전드 합일', '#fff2a0', '뇌신 · 미다스 · 공허 · 시간 지배'); lgPop(x, y, 40, '+$20,000', '#fff2a0', true);
+    lgFlash('rgba(255,250,225,1)', 0.8, 700, true); shake = Math.max(shake, 20); playSound('converge'); lgPop(x, y, 40, '+$20,000', '#fff2a0', true, true);
   }
   // ---- 🌩️ 뇌신: 낙뢰 + 번개 연쇄 + 감전 정지
   function thunderStrike(x, y) {
@@ -2314,7 +2332,7 @@
         };
         for (let n = 0; n < w.pel; n++) mkB(MP.aimA() + rnd(-w.sp, w.sp) * (aim ? 0.3 : 1), 1);
         if (w.pel > 0) for (let s = 0; s < E.split; s++) mkB(MP.aimA() + (s % 2 ? 1 : -1) * 0.08 * (1 + (s >> 1)), 0.6);
-        if (!w.q) playSound('shoot'); if (crit) msg('💥 치명타!'); else if (E.crit) msg('🎯 급소 명중!'); MP.shot(P.x, P.y, 9 + P.z + (P.jh || 0), P.a, big ? 0xff3030 : w.col, w.sz, w.v);
+        if (!w.q) playSound('shoot'); if (crit) msg('💥 치명타!'); else if (E.crit && !lgSNow.l_time) msg('🎯 급소 명중!'); MP.shot(P.x, P.y, 9 + P.z + (P.jh || 0), P.a, big ? 0xff3030 : w.col, w.sz, w.v);
         if (w.hs) snipe(E);
         if (am[wi] === 0) rel = w.rel;
       } else rel = w.rel;
@@ -4093,8 +4111,10 @@
     let enGate = 0;
     function fxShot(i) {   // 발사할 때마다 한 번 호출 → 이번 발사에 적용되는 인첸트 효과
       const r = { free: false, crit: false, split: 0, pr: 0, thru: 0, chain: 0, cdm: 1, stl: 1, hit: null };
+      const seenL = {};
       for (const e of enAll(i)) {
         const id = e.d.id, v = e.v;
+        if (e.d.leg) { if (seenL[id]) continue; seenL[id] = 1; }   // 같은 레전드를 여러 개 박아도 한 번만 적용
         if (id === 'saver') r.free = r.free || Math.random() < v;
         else if (id === 'crit') r.crit = r.crit || Math.random() < v;
         else if (id === 'split') r.split = Math.max(r.split, v);
