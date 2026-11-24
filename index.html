@@ -5057,12 +5057,18 @@
     document.body.appendChild(lobBox);
     for (const ev of ['mousedown', 'mouseup', 'click', 'touchstart']) lobBox.addEventListener(ev, e => e.stopPropagation());
     const lobMine = { diff: 0, size: 1, ev: 0 }; let lobCfg = null, lobLead = false, lobGo = null, lobSendT = 0, lobSig = '', lobWas = false;
-    lobBox.addEventListener('click', e => {
-      const t = e.target.closest('[data-d],[data-s],[data-e]'); if (!t || !lobLead) return;
+    // v23: 난이도 선택이 가끔 안 되던 문제 — 패널이 주기적으로 다시 그려지면서 '누르는 사이' 버튼이 바뀌면 click이 취소됐어요 → 누르는 순간(mousedown/touchstart)에 바로 선택하고, 누르는 동안엔 다시 그리지 않아요
+    let lobPress = 0;
+    lobBox.addEventListener('mouseup', () => { lobPress = 0; }); window.addEventListener('mouseup', () => { lobPress = 0; }); window.addEventListener('touchend', () => { lobPress = 0; });
+    const lobPick = e => {
+      if (e.type !== 'click') lobPress = 1;
+      const t = e.target.closest('[data-d],[data-s],[data-e]'); if (!t) return;
+      if (!lobLead) { if (e.type !== 'click' && lobCfg) msg('🔒 방장 ' + lobCfg.name + ' 님만 설정을 바꿀 수 있어요'); return; }
       if (t.dataset.d !== undefined) { lobMine.diff = +t.dataset.d; lobMine.ev = 0; } if (t.dataset.s !== undefined) lobMine.size = +t.dataset.s;
       if (t.dataset.e !== undefined) { const ev = evById(+t.dataset.e); if (ev && evState(ev) === 'open') lobMine.ev = ev.id; }
       lobCfg = { id: myId, name: myName, diff: lobMine.diff, size: lobMine.size, ev: lobMine.ev, t: performance.now() }; lobSendT = 0; lobSig = '';
-    });
+    };
+    lobBox.addEventListener('mousedown', lobPick); lobBox.addEventListener('touchstart', lobPick, { passive: true }); lobBox.addEventListener('click', lobPick);
     function lobOn() {
       const p = lobPad(), r = p.r - 6, a = [];
       if (P.onFoot && Math.hypot(P.x - p.x, P.y - p.y) < r) a.push({ id: myId, name: myName });
@@ -5101,7 +5107,7 @@
       }
       const cd = lobGo ? Math.max(1, Math.ceil((lobGo.at - now) / 1000)) : 0;
       const sig = [lobCfg.id, lobCfg.diff, lobCfg.size, lobCfg.ev | 0, on.length, cd, lobLead, raidInfoV, Math.floor(Date.now() / 4000)].join('|');
-      if (sig !== lobSig) {
+      if (sig !== lobSig && !lobPress) {
         lobSig = sig; lobBox.className = lobLead ? '' : 'mem';
         lobBox.innerHTML = `<b class="t">🚔 경찰 레이드</b><div style="color:#9fb3c8">${lobLead ? '내가 방장 · 난이도와 인원을 정하세요' : '방장 ' + esc(lobCfg.name) + ' 님이 정한 설정이에요'}</div><div class="sec">난이도</div>`
           + RAID.map((r, i) => `<div class="o${!lobCfg.ev && lobCfg.diff === i ? ' on' : ''}" data-d="${i}">${r.ic} <b>${r.n}</b> · ${r.waves}웨이브<br><small style="color:#9fb3c8">동시 경찰차 ${r.cars}+헬기 ${r.heli}<br>🎁 ${esc(fmtRew(raidInfo && raidInfo.rewards && raidInfo.rewards[i] ? raidInfo.rewards[i].reward : { money: r.rw }))}</small></div>`).join('')
