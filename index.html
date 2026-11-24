@@ -528,7 +528,7 @@
   const ENCH_COST = [30000, 120000, 400000];   // 1 / 2 / 3레벨
   const ENCH_TICKET = 50000;
   // 무기별로 쓸 수 있는 인첸트 (화염방사기는 총알이 아니라서 일부만 · 저격총은 탄 성질형 불가)
-  const enchOk = (wIdx, e) => { const w = WP[wIdx]; if (!w || w.off) return false; if (e.leg) return !w.flame; if (w.flame) return e.id === 'swift' || e.id === 'reload'; if (w.hs) return !['pierce', 'split', 'storm'].includes(e.id); return true; };
+  const enchOk = (wIdx, e) => { const w = WP[wIdx]; if (!w || w.off) return false; if (e.leg) return !w.flame; if (w.flame) return e.id === 'swift' || e.id === 'reload'; return true; };
 
   const pp = p => p.beach ? [p.x, p.y] : [p.h ? p.t : p.k * B + p.off, p.h ? p.k * B + p.off : p.t];
 
