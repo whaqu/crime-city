@@ -167,6 +167,7 @@
         <div><div class="lbl">🛡️ 무적</div><input class="aPot" data-k="god" type="number" min="0" step="1" style="width:100%"></div>
         <div><div class="lbl">💨 스피드</div><input class="aPot" data-k="spd" type="number" min="0" step="1" style="width:100%"></div>
         <div><div class="lbl">🦘 슈퍼점프</div><input class="aPot" data-k="jmp" type="number" min="0" step="1" style="width:100%"></div>
+        <div><div class="lbl">🎫 강화 성공권</div><input class="aPot" data-k="etk" type="number" min="0" step="1" style="width:100%"></div>
       </div>
       <div class="lbl" style="margin-top:12px">🎒 인벤토리 (보관 중인 무기 · 최대 80칸) <span id="aInvN"></span></div>
       <div id="aInv" style="display:flex;flex-direction:column;gap:6px"></div>
@@ -189,7 +190,7 @@ const CATALOG = [
   ['car','x_pickup','파워 픽업',95000],['car','x_muscle','머슬 V8',130000],['car','x_coupe','레트로 쿠페',160000],['car','x_road','스파이더 로드스터',210000],
   ['car','x_limo','블랙 리무진',260000],['car','x_super','라이트닝 슈퍼카',380000],['car','x_gt','카본 GT',520000],['car','x_hyper','플라즈마 하이퍼카',750000],
   ['car','x_f1','포뮬러 레이서',1000000],['car','x_royal','로열 골드 에디션',1400000],['car','x_stealth','스텔스 프로토타입',2000000],
-  ['shop','leg','👑 천벌 (레전드)',300000000],['shop','leg3','🗡️ 천검우 (레전드)',250000000],['shop','leg4','❄️ 절대영도 (레전드)',180000000],['shop','leg5','🐉 화룡포 (레전드)',120000000],['shop','leg2','☄️ 유성포 (레전드 보급형)',80000000],['shop','rail','⚡ 레일건',45000],['shop','flame','🌋 화염방사기',35000],['shop','god','🛡️ 무적 포션',8000],
+  ['shop','leg','👑 천벌 (레전드)',300000000],['shop','etk','🎫 강화 성공권 1장',200000],['shop','etk5','🎫 강화 성공권 5장 묶음',900000],['shop','leg3','🗡️ 천검우 (레전드)',250000000],['shop','leg4','❄️ 절대영도 (레전드)',180000000],['shop','leg5','🐉 화룡포 (레전드)',120000000],['shop','leg2','☄️ 유성포 (레전드 보급형)',80000000],['shop','rail','⚡ 레일건',45000],['shop','flame','🌋 화염방사기',35000],['shop','god','🛡️ 무적 포션',8000],
   ['shop','spd','💨 스피드 포션',4000],['shop','jmp','🦘 슈퍼 점프 포션',3000],['shop','jp','🎒 제트팩',300000],['shop','gh','🪝 그래플링 훅',150000],
   ['shop','jpu','⛽ 제트팩 연료 업그레이드 (모든 단계 동일가, 기본은 단계별 12000~80000)',12000],
   ['shop','gren','💣 수류탄 ×5',1500],['shop','tnt','🧨 TNT ×3',2500],['shop','ammo','📦 탄약 전부 충전',500],['shop','fix','🔧 차량 수리',1500],

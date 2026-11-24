@@ -3732,6 +3732,8 @@
     // v20: 관리자 가격 덮어쓰기(PRICES) · 글로벌 한정 재고(GS) — Supabase cc_prices / cc_global_stock
     const PRICES = {}, GS = { stock: {}, ok: false };
     const ITEMS = [
+      { id: 'etk5', ic: '🎫', get n() { return '강화 성공권 5장 묶음' + (potN('etk') ? ' · 보유 ' + potN('etk') + '장' : ''); }, d: '강화소에서 체크하면 5장을 써서 그 강화가 100% 성공 (실패·하락 없음)', p: 900000 },
+      { id: 'etk', ic: '🎫', get n() { return '강화 성공권 1장' + (potN('etk') ? ' · 보유 ' + potN('etk') + '장' : ''); }, d: '강화소에서 체크하면 5장을 써서 그 강화가 100% 성공 · 사면 자동 보관', p: 200000 },
       { id: 'leg3', ic: '🗡️', n: '천검우 (레전드)', d: '3발 · 하늘에서 검 8자루 + 거대 천검 마무리', p: 250000000, w: 24, gold: 1 },
       { id: 'leg4', ic: '❄️', n: '절대영도 (레전드)', d: '3발 · 총알 없이 내 위치에서 원형 충격파가 퍼지며 4초 동결 후 산산조각 폭발', p: 180000000, w: 23, gold: 1 },
       { id: 'leg5', ic: '🐉', n: '화룡포 (레전드)', d: '4발 · 불기둥 나선 연쇄 폭발 + 지옥불 장판', p: 120000000, w: 22, gold: 1 },
@@ -3873,6 +3875,7 @@
       if (it.w && own[it.w]) { invPush(it.w, 0, null); saveOwn(); event(`님이 ${it.n}을(를) 또 샀습니다!`); msg(`🎒 이미 갖고 있어서 ${it.n}을(를) 인벤토리에 넣었어요 · I 키로 핫바에 장착`); }
       else if (it.w) { own[it.w] = 1; LS.set('cc_own', JSON.stringify(own)); am[it.w] = WP[it.w].mag; if (P.onFoot) { wi = it.w; rel = 0; scope = false; } event(`님이 ${it.n}을(를) 샀습니다!`); }
       else if (it.perm) { own[it.perm] = 1; if (it.perm === 'pvp') { own.pvpOn = 1; php = 100; } LS.set('cc_own', JSON.stringify(own)); event(`님이 ${it.n}을(를) 샀습니다!`); msg(it.perm === 'gh' ? '🪝 그래플링 훅 획득! 건물을 조준하고 C' : it.perm === 'pvp' ? '⚔️ PvP 켜짐! 상점에서 언제든 켜고 끌 수 있어요' : it.perm === 'jp' ? '🎒 제트팩 장착! 점프 후 Space를 꾹 누르면 날아요' : '✅ ' + it.n + ' 획득!'); }
+      else if (id === 'etk' || id === 'etk5') { const n = id === 'etk5' ? 5 : 1; potAdd('etk', n); saveOwn(); msg(`🎫 강화 성공권 ${n}장 획득 (보유 ${potN('etk')}장) · 강화소에서 체크하면 5장씩 써요`); renderShop(); return; }
       else if (POT[id]) { potAdd(id, 1); saveOwn(); msg(`🎒 ${POT[id].n} 1병이 인벤토리에 들어갔어요 · I 키 → 클릭해서 마시기 (보유 ${potN(id)}병)`); renderShop(); return; }
       else if (id === 'gren') gren += 5;
       else if (id === 'tnt') tnt += 3;
@@ -4396,7 +4399,7 @@
     }
 
     // ---------------------------------------------------------------- 무기 강화소 (강화 최대 +99 · 인첸트 탭은 이용권($50,000)을 사야 열림)
-    let enTab = 'enh', enT = null, enPick = false, enSelK = null, enLgK = null;
+    let enTab = 'enh', enT = null, enPick = false, enSelK = null, enLgK = null, enUseTk = false;
     const LG_ATT_COST = 100000, LG_ATT_P = 0.1;   // enT: { s: 'h', i } 핫바 무기 · { s: 'v', n } 인벤토리 무기
     const enNote = (t, ok) => { $('enRes').style.color = ok ? '#6f6' : '#f66'; $('enRes').textContent = t; };
     const tOk = t => t && (t.s === 'h' ? (WP[t.i] && !WP[t.i].off && (t.i < 6 || own[t.i])) : !!(Array.isArray(own.inv) && own.inv[t.n]));
@@ -4457,7 +4460,7 @@
           + '<div class="ds" style="margin:12px 0 4px;font-weight:800;color:#c9a6ff;font-size:13px">🔗 겹침 시너지 (한 무기에 레전드 인첸트를 겹치세요)</div>' + [...LG_SYN, LG_ALL].map(y => `<div class="row"><div class="nm">${y.ic} ${y.n} <span style="font-size:11px;color:#9fb3c8">${y.k.map(id => ENCH.find(e => e.id === id).n).join(' + ')}</span><div class="ds">${y.d}</div></div></div>`).join('');
       } else {
         const mx = lv >= ENH_MAX;
-        h += `<div class="row"><div class="nm">${esc(WP[w].n)} <span style="color:#ffb347">${lv ? '+' + lv : ''}</span><div class="ds">${mx ? 'MAX 강화 완료 (+99)' : `성공 ${enhChance(lv)}% · 비용 ${fmt(enhCost(lv))}${ENH_DROP(lv) ? ' · 실패 시 −1단계' : ''}`} · 데미지 ×${dmgMul(lv).toFixed(2)} · 연사 ×${(1 / cdMul(lv)).toFixed(2)}</div></div><div class="btn o${mx || money < enhCost(lv) ? ' dis' : ''}" data-i="1">${mx ? 'MAX' : '강화'}</div></div>`;
+        h += `<div class="row"><div class="nm">${esc(WP[w].n)} <span style="color:#ffb347">${lv ? '+' + lv : ''}</span><div class="ds">${mx ? 'MAX 강화 완료 (+99)' : `성공 ${enhChance(lv)}% · 비용 ${fmt(enhCost(lv))}${ENH_DROP(lv) ? ' · 실패 시 −1단계' : ''}`} · 데미지 ×${dmgMul(lv).toFixed(2)} · 연사 ×${(1 / cdMul(lv)).toFixed(2)}</div></div>${mx ? '' : `<label style="display:flex;align-items:center;gap:4px;font-size:12px;color:${potN('etk') >= 5 ? '#ffd23f' : '#6b7a8c'};cursor:${potN('etk') >= 5 ? 'pointer' : 'default'};user-select:none"><input type="checkbox" data-tk="1"${enUseTk && potN('etk') >= 5 ? ' checked' : ''}${potN('etk') >= 5 ? '' : ' disabled'}>🎫 성공권 5장 (보유 ${potN('etk')}) → 100%</label>`}<div class="btn o${mx || money < enhCost(lv) ? ' dis' : ''}" data-i="1">${mx ? 'MAX' : '강화'}</div></div>`;
       }
       $('enList').innerHTML = h;
     }
@@ -4469,13 +4472,13 @@
       if (!enT || !tOk(enT)) return;
       if (t.dataset.i !== undefined) enhance(); else if (t.dataset.en !== undefined) enchant(); else if (t.dataset.lgatt !== undefined) lgAttach();
     });
-    enhEl.addEventListener('change', e => { const s = e.target.closest('.es'); if (s) { if (s.classList.contains('lgs')) enLgK = +s.value; else enSelK = +s.value; renderEnh(); } });
+    enhEl.addEventListener('change', e => { const tk = e.target.closest('[data-tk]'); if (tk) { enUseTk = tk.checked; renderEnh(); return; } const s = e.target.closest('.es'); if (s) { if (s.classList.contains('lgs')) enLgK = +s.value; else enSelK = +s.value; renderEnh(); } });
     function enhance() {
       const t = enT, w = tW(t), lv = tLv(t); if (lv >= ENH_MAX) return;
       const cost = enhCost(lv); if (money < cost) { enNote(`돈이 부족해요 (${fmt(cost - money)} 더 필요)`, 0); playSound('shoot'); return; }
-      money -= cost;
-      if (Math.random() * 100 < enhChance(lv)) {
-        tSetLv(t, lv + 1); enNote(`✨ 강화 성공! ${WP[w].n} +${lv + 1}`, 1); playSound('cash');
+      const useTk = enUseTk && potN('etk') >= 5; money -= cost; if (useTk) own.pot.etk = potN('etk') - 5;   // v23: 강화 성공권 5장 → 100% 성공
+      if (useTk || Math.random() * 100 < enhChance(lv)) {
+        tSetLv(t, lv + 1); enNote(`${useTk ? '🎫 성공권 사용! ' : ''}✨ 강화 성공! ${WP[w].n} +${lv + 1}`, 1); playSound('cash');
         if (lv + 1 >= 7 && (lv + 1 <= 10 || (lv + 1) % 5 === 0)) event(`님이 ${WP[w].n}을(를) +${lv + 1} 강화에 성공했습니다! 🔨`);
         if (lv + 1 === ENH_MAX) title('🔨 99강 달성!', `${myName} · ${WP[w].n} +99`, '#ffd23f');
       } else {
