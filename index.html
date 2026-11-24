@@ -1127,9 +1127,9 @@
   }
 
   function startRob(r) {
-    const q = rt(r); robbing = { r, t: 0, d: q.d }; heat = Math.max(heat, q.h); shake = 6;
-    msg(q.s); playSound('siren');
-    for (let n = 0; n < q.off; n++) spawnOff({ x: r.x, y: r.y - n * 60, a: n * 2 });
+    const q = rt(r); robbing = { r, t: 0, d: q.d, seen: 0 }; shake = 6;
+    if (MP.raid()) { heat = Math.max(heat, q.h); msg(q.s); playSound('siren'); for (let n = 0; n < q.off; n++) spawnOff({ x: r.x, y: r.y - n * 60, a: n * 2 }); }
+    else msg(q.t + ' · 순찰 경찰 눈에 띄지 않게!');   // 일반 게임: 경보·경비 없음. 순찰 경찰이 보면 그때부터 추격
   }
 
   function robUpd(dt, tg) {
@@ -1158,10 +1158,10 @@
       const r = robbing.r;
       if (!P.onFoot || tased > 0 || (MP.raid() && P.z > 14) || Math.hypot(P.x - r.x, P.y - r.y) > rt(r).f) { robbing = null; msg('강도 실패! 자리를 벗어남' + (MP.raid() && P.z > 14 ? ' (레이드에서는 땅에서만 털 수 있어요)' : '')); }
       else {
-        robbing.t += dt; heat = Math.max(heat, rt(r).h);
+        robbing.t += dt; if (MP.raid()) heat = Math.max(heat, rt(r).h);
         if (robbing.t >= robbing.d) {
           const g = Math.round(rnd(rt(r).min, rt(r).max) * 5 * (MP.has('bag') ? 1.3 : 1));
-          money += g; heat = Math.min(5, heat + rt(r).hs); r.cool = MP.raid() ? 30 : r.k === 'a' ? 90 : 150; robbing = null; MP.raidRob(rt(r).d >= 7 ? 2 : 1);
+          money += g; heat = Math.min(5, heat + (MP.raid() ? rt(r).hs : robbing.seen ? rt(r).hs * 0.5 : 0)); r.cool = MP.raid() ? 30 : r.k === 'a' ? 90 : 150; robbing = null; MP.raidRob(rt(r).d >= 7 ? 2 : 1);
           msg('💰 ' + rt(r).n + ' 강탈 성공! +$' + g.toLocaleString()); playSound('cash'); MP.loot(rt(r).n + ' 강탈 성공! +$' + g.toLocaleString() + ' (근처 팀원 30% 보너스)', g);
         }
       }
@@ -2232,7 +2232,7 @@
   // 1) 도시에는 순찰차(c.pat)가 도로를 돌아다녀요  2) 수배(★) 중인 나를 발견하면 무전으로 지원 요청 → 주변 순찰차가 합류, 부족한 인원은 멀리서 증원
   // 3) ★이 높을수록 경찰차 수 + 헬기 수가 늘고, 4★부터 군대(장갑차·탱크·공격헬기)  4) 강도를 하면 경보가 울려서 바로 출동해요
   let seenT = -99, called = false, patT = 0, heliMsg = 0; const hms = [], hmM = new THREE.MeshBasicMaterial({ color: 0xff7a1a });
-  const wantCars = st => [0, 2, 3, 5, 7, 9][st] | 0, wantHeli = st => [0, 0, 0, 1, 2, 3][st] | 0;
+  const wantCars = st => (MP.raid() ? [0, 2, 3, 5, 7, 9] : [0, 1, 2, 4, 6, 9])[st] | 0, wantHeli = st => [0, 0, 0, 1, 2, 3][st] | 0;
   function spawnPatrol() {
     const tg = P.onFoot ? P : (P.car || P);
     for (let n = 0; n < 30; n++) {
@@ -2243,11 +2243,17 @@
       cars.push(c); return;
     }
   }
+  // 순찰차 c 가 나를 볼 수 있는가: 거리(420 · 옥상/공중이면 300) 안이고 사이에 건물이 없을 때
+  function copSees(c, tg) {
+    const R = (tg.z || 0) > 40 ? 300 : 420, d = Math.hypot(tg.x - c.x, tg.y - c.y); if (d > R) return false;
+    for (let i = 1; i < 12; i++) { const x = c.x + (tg.x - c.x) * i / 12, y = c.y + (tg.y - c.y) * i / 12; if (bh(x, y) > (tg.z || 0) + 25) return false; }
+    return true;
+  }
   // 순찰차 c 가 수배자를 발견했거나 경보를 받음 → 추격 모드 + 주변 순찰차 모집
   function callIn(c, tg, stars) {
     c.pat = 0; c.seek = null; seenT = T;
-    if (!called) { called = true; msg('📻 순찰 경찰이 수배자를 발견! 지원 요청 중…'); playSound('siren'); }
     let need = Math.max(0, wantCars(stars) - 1);
+    if (!called) { called = true; msg(need > 0 || MP.raid() ? '📻 순찰 경찰이 수배자를 발견! 지원 요청 중…' : '👮 순찰 경찰에게 들켰다! 이 경찰만 처치하면 돼요'); playSound('siren'); }
     const pool = cars.filter(o => o.type === 'c' && o.pat && o !== c && Math.hypot(o.x - tg.x, o.y - tg.y) < 2000).sort((a, b) => Math.hypot(a.x - tg.x, a.y - tg.y) - Math.hypot(b.x - tg.x, b.y - tg.y));
     for (const o of pool) { if (need-- <= 0) break; o.pat = 0; o.seek = null; }
     if (stars >= 3 && !heliMsg) { heliMsg = 1; msg(stars >= 4 ? '🚨 지원 요청: 군대와 공격헬기 출동!' : '🚁 지원 요청: 경찰 헬기 출동!'); }
@@ -2377,7 +2383,7 @@
 
     const tg = P.onFoot ? P : P.car, stars = Math.min(5, Math.ceil(heat - 1e-6));
     robUpd(dt, tg);
-    if (robbing && !robbing.al && robbing.t > 2.5) { robbing.al = 1; alarmCall(tg, Math.max(1, stars)); }
+    if (MP.raid() && robbing && !robbing.al && robbing.t > 2.5) { robbing.al = 1; alarmCall(tg, Math.max(1, stars)); }
     if (heat <= 0 || (called && T - seenT > 14)) { called = false; heliMsg = 0; }   // 14초 동안 아무도 나를 못 봤으면 수색 모드로 돌아가요
     for (const c of cars) {
       if (c.type === 't') tUpd(c, dt);
@@ -2385,8 +2391,12 @@
         if (c.stun > 0) { c.stun -= dt; c.v *= 0.95; } 
         else {
           if (c.pat) {   // 순찰 중: 평소엔 도로를 돌다가, 수배 중이면 내 쪽으로 수색 · 시야(420) 안에서 발견하면 지원 요청
-            c.seek = stars > 0 && !called ? tg : null; c.sp = c.seek ? 215 : 135; tUpd(c, dt);
-            if (stars > 0 && !activeInterior && !MP.hall() && Math.hypot(tg.x - c.x, tg.y - c.y) < ((tg.z || 0) > 40 ? 300 : 420)) callIn(c, tg, stars);
+            c.seek = MP.raid() && stars > 0 && !called ? tg : null; c.sp = c.seek ? 215 : 135; tUpd(c, dt);   // 일반 게임: 순찰차는 나를 찾아다니지 않고 도로만 돌아요
+            const watching = stars > 0 || (robbing && !MP.raid());   // 별이 있거나 강도 중일 때만 나를 알아봐요
+            if (watching && !activeInterior && !MP.hall() && copSees(c, tg)) {
+              if (stars === 0 && robbing) { heat = Math.max(heat, Math.min(rt(robbing.r).h, 2)); robbing.seen = 1; msg('👀 강도 현장을 순찰 경찰이 봤다!'); }
+              callIn(c, tg, Math.max(1, Math.min(5, Math.ceil(heat - 1e-6))));
+            }
           }
           else if (c.kind === 'heli') fly(c, 1, Math.sign(angN(Math.atan2(tg.y - c.y, tg.x - c.x) - c.a)), dt);
           else pUpd(c, dt, tg, stars);
@@ -2454,7 +2464,7 @@
       if (!dead) for (const c of cars) {
         if (c !== P.car && !(b.ig && b.ig.has(c)) && Math.hypot(c.x - b.x, c.y - b.y) < 32 && Math.abs((c.z || 0) + 8 - b.z) < 60) {
           dead = true; if (b.w === 4) { if (c.type === 'c') c.stun = 4; else c.stall = 4; c.v *= 0.2; }
-          else if (!WP[b.w].rk) { dmgCar(c, bdm(b)); heat = Math.min(5, heat + (WP[b.w].q ? 0 : 0.3)); }
+          else if (!WP[b.w].rk) { dmgCar(c, bdm(b)); if (c.type !== 'c' || MP.raid()) heat = Math.min(5, heat + (WP[b.w].q ? 0 : 0.3)); }
           if (b.en) MP.enHit(b, 'c', c);
           if (pierceOk(b, c)) dead = false;
           break;
@@ -2468,7 +2478,7 @@
         const o = offs[j]; if (o.dead > 0) continue;
         if (Math.hypot(o.x - b.x, o.y - b.y) < 20 && !(b.ig && b.ig.has(o))) {
           dead = true; if (b.w === 4) { o.dead = 4; o.m.rotation.z = Math.PI / 2; }
-          else if (!WP[b.w].rk) { o.hp -= bdm(b); heat = Math.min(5, heat + (WP[b.w].q ? 0 : 0.3)); if (o.hp <= 0) killOff(j); }
+          else if (!WP[b.w].rk) { o.hp -= bdm(b); if (MP.raid()) heat = Math.min(5, heat + (WP[b.w].q ? 0 : 0.3)); if (o.hp <= 0) killOff(j); }
           if (b.en && offs[j] === o) MP.enHit(b, 'o', o);
           if (pierceOk(b, o)) dead = false;
           break;
@@ -2504,6 +2514,7 @@
     }
     if (!MP.hall() && cars.filter(c => c.type === 't').length < 40) spawnT(true);   // 홀(로비·경매장)에서는 도시 차량을 새로 만들지 않음
 
+    if (!MP.raid() && called && police === 0 && offs.length === 0) { called = false; heliMsg = 0; }   // 쫓던 경찰을 모두 처치하면 끝: 더 이상 증원이 오지 않아요
     const rdOn = MP.raid(), want = rdOn ? MP.raidWant() : wantCars(stars) + wantHeli(stars), hw = rdOn ? MP.raidHeli() : wantHeli(stars); pt -= dt; patT -= dt;
     // 증원은 '발견됐을 때'만 (레이드는 전 경찰 비상이라 항상). 안 들켰으면 순찰차가 수색하러 올 때까지 기다려요
     const callActive = rdOn || (called && T - seenT < 14);
