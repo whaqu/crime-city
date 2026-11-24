@@ -1,5 +1,10 @@
 # CRIME CITY 3D v23 · 멀티플레이
 
+## v23 최적화
+- 도시 전체를 덮는 InstancedMesh(차선·건물 디테일·가로등·옥상 설치물)를 구역별로 나눠 화면 밖은 그리지 않아요. 프레임당 삼각형 약 366만 → 약 6만, 보이는 화면과 기능은 그대로예요
+- `=` 키: 프레임률(FPS) 표시 토글 (기본 꺼짐)
+- 최적화 전 버전은 `old/v23/`에 보관
+
 플레이: https://dohyuni4321.github.io/wnstj-city/ · 이전 버전: https://dohyuni4321.github.io/wnstj-city/old/
 
 ## v4

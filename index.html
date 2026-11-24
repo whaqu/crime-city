@@ -172,6 +172,44 @@
   const B = 400, R = 60, N = 52, W = B * N, rnd = (a, b) => a + Math.random() * (b - a);
   const keys = {};
 
+  // ===== 성능: 도시 전체를 덮는 InstancedMesh를 구역(800)별로 나눠서, 화면 밖 구역은 GPU로 보내지 않아요 (보이는 화면은 그대로) =====
+  const CHK = [], _cfr = new THREE.Frustum(), _cpm = new THREE.Matrix4(), chkRoot = new THREE.Group();
+  chkRoot.matrixAutoUpdate = false; sc.add(chkRoot);
+  function chunkIM(src, cell) {
+    cell = cell || 800;
+    const g = src.geometry, mat = src.material, cnt = src.count, ma = src.instanceMatrix.array, ca = src.instanceColor ? src.instanceColor.array : null;
+    if (!g.boundingSphere) g.computeBoundingSphere();
+    const bs = g.boundingSphere, tm = new THREE.Matrix4(), v = new THREE.Vector3();
+    const keyOf = new Map(), lists = [], mapC = new Int32Array(cnt), mapK = new Int32Array(cnt);
+    for (let i = 0; i < cnt; i++) {
+      const key = Math.floor(ma[i * 16 + 12] / cell) + ',' + Math.floor(ma[i * 16 + 14] / cell);
+      let ci = keyOf.get(key); if (ci === undefined) { ci = lists.length; keyOf.set(key, ci); lists.push([]); }
+      mapC[i] = ci; mapK[i] = lists[ci].length; lists[ci].push(i);
+    }
+    const meshes = lists.map(list => {
+      const m = new THREE.InstancedMesh(g, mat, list.length);
+      let mnx = 1e9, mny = 1e9, mnz = 1e9, mxx = -1e9, mxy = -1e9, mxz = -1e9;
+      const cs = [], rs = [];
+      list.forEach((i, k) => {
+        m.instanceMatrix.array.set(ma.subarray(i * 16, i * 16 + 16), k * 16);
+        tm.fromArray(ma, i * 16); v.copy(bs.center).applyMatrix4(tm); const r = bs.radius * tm.getMaxScaleOnAxis();
+        cs.push(v.x, v.y, v.z); rs.push(r);
+        mnx = Math.min(mnx, v.x - r); mny = Math.min(mny, v.y - r); mnz = Math.min(mnz, v.z - r); mxx = Math.max(mxx, v.x + r); mxy = Math.max(mxy, v.y + r); mxz = Math.max(mxz, v.z + r);
+      });
+      if (ca) { m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(list.length * 3), 3); list.forEach((i, k) => m.instanceColor.array.set(ca.subarray(i * 3, i * 3 + 3), k * 3)); }
+      const c = new THREE.Vector3((mnx + mxx) / 2, (mny + mxy) / 2, (mnz + mxz) / 2); let R2 = 0;
+      for (let k = 0; k < rs.length; k++) R2 = Math.max(R2, Math.hypot(cs[k * 3] - c.x, cs[k * 3 + 1] - c.y, cs[k * 3 + 2] - c.z) + rs[k]);
+      m.frustumCulled = false; m.matrixAutoUpdate = false;
+      CHK.push({ m, s: new THREE.Sphere(c, R2 + 1) });
+      return m;
+    });
+    return { setMatrixAt(i, mx) { const m = meshes[mapC[i]]; mx.toArray(m.instanceMatrix.array, mapK[i] * 16); m.instanceMatrix.needsUpdate = true; }, instanceMatrix: { set needsUpdate(_) {} } };
+  }
+  function cullChunks() {
+    cm.updateMatrixWorld(); _cpm.multiplyMatrices(cm.projectionMatrix, cm.matrixWorldInverse); _cfr.setFromProjectionMatrix(_cpm);
+    for (let i = 0; i < CHK.length; i++) { const c = CHK[i], v = _cfr.intersectsSphere(c.s); if (v && !c.m.parent) chkRoot.add(c.m); else if (!v && c.m.parent) chkRoot.remove(c.m); }
+  }
+
   window.addEventListener('keydown', e => {
     const k = e.key.toLowerCase();
     if (k === 'x' && !e.repeat) lgTap = 1;
@@ -233,7 +271,7 @@
       o.rotation.y = 0; o.position.set(t * 36 + 9, 0.4, k * B); o.updateMatrix(); ds.setMatrixAt(n++, o.matrix);
       o.rotation.y = Math.PI / 2; o.position.set(k * B, 0.4, t * 36 + 9); o.updateMatrix(); ds.setMatrixAt(n++, o.matrix);
     }
-    sc.add(ds);
+    chunkIM(ds);
   }
 
   // Building Canvas Textures
@@ -318,12 +356,12 @@
     const gs = [new THREE.BoxGeometry(1, 1, 1), new THREE.CylinderGeometry(0.5, 0.5, 1, 10), new THREE.ConeGeometry(0.5, 1, 4)], o = new THREE.Object3D(), cc = new THREE.Color();
     DL.forEach((l, t) => {
       if (!l.length) return;
-      const im = new THREE.InstancedMesh(gs[t], new THREE.MeshLambertMaterial({ color: 0xffffff }), l.length); im.frustumCulled = false; DIM[t] = im;
+      const im = new THREE.InstancedMesh(gs[t], new THREE.MeshLambertMaterial({ color: 0xffffff }), l.length); 
       l.forEach((e, n) => {
         o.position.set(e[0], e[1], e[2]); o.scale.set(e[3], e[4], e[5]); o.rotation.y = e[7]; o.updateMatrix();
         im.setMatrixAt(n, o.matrix); im.setColorAt(n, cc.set(e[6]));
       });
-      sc.add(im);
+      DIM[t] = chunkIM(im);
     });
   }
 
@@ -334,8 +372,7 @@
       o.position.set(i * B + dx * (R + 4), 13, j * B + dz * (R + 4)); o.updateMatrix(); lp.setMatrixAt(n, o.matrix);
       o.position.y = 26; o.updateMatrix(); lh.setMatrixAt(n, o.matrix); n++;
     }
-    sc.add(lp, lh);
-    window.streetLampMeshes = [lp, lh];
+    window.streetLampMeshes = [chunkIM(lp), chunkIM(lh)];
   }
 
   // Roof AC Units & Antennas
@@ -345,7 +382,7 @@
       o.position.set(b.cx + rnd(-80, -30), b.h + 3, b.cz + rnd(-80, 80)); o.updateMatrix(); ac.setMatrixAt(n, o.matrix);
       o.position.set(b.cx + rnd(30, 90), b.h + 15, b.cz + rnd(-80, 80)); o.updateMatrix(); an.setMatrixAt(n, o.matrix); n++;
     }
-    ac.count = an.count = n; sc.add(ac, an);
+    ac.count = an.count = n; chunkIM(ac); chunkIM(an);
   }
 
   // Low Sky Clouds
@@ -2738,7 +2775,7 @@
     cm.lookAt(tg.x + Math.cos(ca) * (sc2 ? 300 : 30), 8 + zz + Math.tan(ap) * (sc2 ? 300 : 60), tg.y + Math.sin(ca) * (sc2 ? 300 : 30));
     }
     cm.fov = sc2 ? 22 : (P.onFoot && aim ? 46 : 65 + Math.min(sp, 560) / 360 * 15);
-    cm.updateProjectionMatrix(); rd.render(sc, cm);
+    cm.updateProjectionMatrix(); cullChunks(); rd.render(sc, cm);
   }
 
   // ============================================================================
@@ -5428,9 +5465,21 @@
     return { tick, hud, mini, wlv, station, shot, hall: () => hall, raid: () => !!raid, raidWant, raidHeli, raidTank, raidRem: () => raid && raid.ph === 'run' ? Math.max(0, raid.total - raid.kills) : -1, raidSpeed, raidKill, raidCanRob: () => !!raid && raid.ph === 'stl', raidRob, raidBusted, abHole: (x, y) => wellAdd(x, y, 60, 1), nitro: () => nitroT > 0, has: k => !!own[k], pvpOn, pvpCone, pvpRad, pvpRay, boom: boomEv, loot, rideKey, bulletHit, martial: martialEv, busted: bustedEv, dbg: () => ({ last: lastD, st: status, host: isHost(), hostId: hostId(), me: myId, rem: [...remotes.values()].map(r => ({ id: r.id, x: r.x | 0, y: r.y | 0, z: r.z | 0, onFoot: r.onFoot, kind: r.kind, nid: r.nid, drv: !!r.drvC, rd: r.rd, inMap: nidMap.has(r.nid), isP: nidMap.get(r.nid) === P.car, inCars: cars.some(c => c.nid === r.nid) })) }), locked: () => locked, riding: () => !!ride, aimA, aimVz: (v, z0) => v * aimSl(z0), aimSl, god: () => god > 0, jv: () => jumpT > 0 ? 600 : 230, spd: () => (spdT > 0 ? 2 : 1) * (jpOn ? 1.6 : 1) * swiftMul(), fx: fxShot, enHit, relMul, enTag, lgSet: () => { const o = {}; for (const e of enAll(wi)) if (e.d.leg) o[e.d.id] = 1; return o; }, lgNote: i => { const L = enAll(i).filter(x => x.d.leg); if (!L.length) return ''; const S = {}; for (const x of L) S[x.d.id] = 1; const sy = lgSynNames(S); return ' · ' + [...new Set(L.map(x => x.d.ic + x.d.n))].join(' ') + (sy.length ? ' 🔗 ' + sy.join(' · ') : ': ' + L[0].d.s); }, phys, pS: pSolid, jump: doJump };
   })();
 
+  // ===== = 키: 프레임률 표시 토글 (기본 꺼짐) =====
+  const fpsEl = document.createElement('div');
+  fpsEl.style.cssText = 'position:fixed;right:10px;bottom:64px;z-index:50;display:none;pointer-events:none;font:bold 13px system-ui,monospace;color:#7bd44a;background:#000a;padding:4px 8px;border-radius:6px;text-shadow:0 1px 2px #000';
+  document.body.appendChild(fpsEl);
+  let fpsOn = false, fpsN = 0, fpsT = 0;
+  window.addEventListener('keydown', e => {
+    if (e.key !== '=' || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+    const a = document.activeElement; if (a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.isContentEditable)) return;
+    fpsOn = !fpsOn; fpsEl.style.display = fpsOn ? 'block' : 'none'; fpsN = 0; fpsT = 0;
+  });
   let last = performance.now();
   function loop(n) {
-    const dt = Math.min(0.05, (n - last) / 1000); last = n;
+    const dt = Math.min(0.05, (n - last) / 1000);
+    if (fpsOn) { fpsN++; fpsT += n - last; if (fpsT >= 500) { fpsEl.textContent = 'FPS ' + Math.round(fpsN * 1000 / fpsT) + ' · ' + (fpsT / fpsN).toFixed(1) + 'ms'; fpsN = 0; fpsT = 0; } }
+    last = n;
     if (slow) { en -= 32 * dt; if (en <= 0) { en = 0; slow = false; } } else en = Math.min(100, en + 10 * dt);
     update(dt * (slow ? 0.35 : 1)); MP.tick(dt); render(dt); drawHud(); MP.hud();
     requestAnimationFrame(loop);
