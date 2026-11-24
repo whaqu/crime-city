@@ -360,9 +360,38 @@ function enEditor(get, set) {
       ad.append(es, el, b);
     } else { const m = document.createElement('span'); m.className = 'lbl'; m.textContent = '최대 ' + EN_MAX + '개까지 붙일 수 있어요'; ad.appendChild(m); }
     const c = document.createElement('span'); c.className = 'cnt'; c.textContent = L.length + ' / ' + EN_MAX; ad.appendChild(c); box.appendChild(ad);
+    // v23: 한 번에 붙여넣기 · 복사
+    const bk = document.createElement('div'); bk.className = 'ad'; bk.style.marginTop = '4px';
+    const ta = document.createElement('textarea'); ta.rows = 2; ta.style.cssText = 'flex:1;min-width:180px;' + SELI + ';color:inherit;font:12px system-ui'; ta.placeholder = '여러 개 한 번에 붙여넣기 · 예) 뇌신 Lv3 + 미다스 Lv3 + 공허 Lv3 + 시간 지배 Lv3  /  화염 3, 뇌전 2  /  뇌신 x4  /  [[15,3],[16,3]]';
+    const mkb = (t, fn) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'enBtn'; b.textContent = t; b.onclick = ev => { ev.preventDefault(); ev.stopPropagation(); fn(); }; return b; };
+    const info = document.createElement('span'); info.className = 'lbl';
+    bk.append(ta,
+      mkb('📥 붙여넣은 걸로 교체', () => { const r = parseEn(ta.value); if (!r.L.length) { info.textContent = '인식된 인첸트가 없어요'; return; } commit(r.L.slice(0, EN_MAX)); if (r.bad.length) toast('인식 못 한 항목: ' + r.bad.join(', '), 0); }),
+      mkb('➕ 뒤에 추가', () => { const r = parseEn(ta.value); if (!r.L.length) { info.textContent = '인식된 인첸트가 없어요'; return; } commit(L.concat(r.L).slice(0, EN_MAX)); if (r.bad.length) toast('인식 못 한 항목: ' + r.bad.join(', '), 0); }),
+      mkb('📋 복사', async () => { const tx = enText(get()); try { await navigator.clipboard.writeText(tx); info.textContent = '복사됨: ' + (tx || '(없음)'); } catch (e) { ta.value = tx; ta.select(); info.textContent = '직접 Ctrl+C 하세요'; } }),
+      mkb('👑 레전드 4종', () => commit([[15, 3], [16, 3], [17, 3], [18, 3]])), info);
+    box.appendChild(bk);
     for (const ev of ['click', 'change', 'input']) box.addEventListener(ev, e => e.stopPropagation(), { once: false });
   }
   render(); box.render = render; return box;
+}
+// 붙여넣기 해석: JSON([[idx,lv],..]) 또는 '이름 Lv3 + 이름 2, 이름 x4' 형태 (이름은 일부만 써도 됨 · 줄/쉼표/+ 로 구분)
+const enKey = t => String(t).replace(/레전드|\(.*?\)/g, '').replace(/[^가-힣a-zA-Z0-9]/g, '');
+function parseEn(txt) {
+  txt = String(txt || '').trim(); const L = [], bad = [];
+  if (!txt) return { L, bad };
+  try { const j = JSON.parse(txt); const a = Array.isArray(j) ? (typeof j[0] === 'number' ? [j] : j) : []; for (const p of a) if (Array.isArray(p) && ENCHN[p[0]]) L.push([p[0] | 0, Math.max(1, Math.min(3, p[1] | 0 || 1))]); if (L.length) return { L, bad }; } catch (e) {}
+  const keys = ENCHN.map(enKey);
+  for (const raw of txt.split(/[+\n,;/|]+/)) {
+    let t = raw.trim(); if (!t) continue;
+    let n = 1, lv = 3; const mx = t.match(/[x×*]\s*(\d+)/i); if (mx) { n = Math.max(1, Math.min(EN_MAX, +mx[1])); t = t.replace(mx[0], ' '); }
+    const ml = t.match(/lv\.?\s*(\d)|레벨\s*(\d)|(\d)\s*$/i); if (ml) { lv = +(ml[1] || ml[2] || ml[3]); t = t.replace(ml[0], ' '); }
+    const k = enKey(t); if (!k) continue;
+    let i = keys.findIndex(x => x === k); if (i < 0) i = keys.findIndex(x => x.includes(k) || k.includes(x));
+    if (i < 0) { bad.push(raw.trim()); continue; }
+    for (let q = 0; q < n; q++) L.push([i, Math.max(1, Math.min(3, lv))]);
+  }
+  return { L, bad };
 }
 const enList = x => Array.isArray(x) ? (typeof x[0] === 'number' ? [x] : x).filter(p => Array.isArray(p) && ENCHN[p[0]]) : [];
 const enText = x => enList(x).map(p => ENCHN[p[0]] + ' Lv' + p[1]).join(' + ');
