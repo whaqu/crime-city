@@ -2844,14 +2844,32 @@
     if (slow) { ctx.fillStyle = '#3a8cff22'; ctx.fillRect(0, 0, VW, VH); }
 
     // Reticle
-    if ((P.onFoot || P.car.gun) && !(scope && wi === 5)) {
+    if ((P.onFoot || P.car.gun) && !(scope && isSn(wi))) {
       ctx.shadowBlur = 0; ctx.fillStyle = '#fff'; ctx.fillRect(VW / 2 - 1, VH / 2 - 7, 2, 14); ctx.fillRect(VW / 2 - 7, VH / 2 - 1, 14, 2); ctx.shadowBlur = 4;
     }
-    if (P.onFoot && scope && wi === 5) {
-      ctx.save(); ctx.shadowBlur = 0; ctx.strokeStyle = '#000'; ctx.lineWidth = 2; ctx.beginPath();
-      ctx.moveTo(VW / 2 - 140, VH / 2); ctx.lineTo(VW / 2 + 140, VH / 2);
-      ctx.moveTo(VW / 2, VH / 2 - 140); ctx.lineTo(VW / 2, VH / 2 + 140); ctx.stroke();
-      ctx.fillStyle = '#f22'; ctx.fillRect(VW / 2 - 2, VH / 2 - 2, 4, 4); ctx.restore();
+    if (P.onFoot && scope && isSn(wi)) {
+      const gold = wi !== 5, cx = VW / 2, cy = VH / 2, R = Math.min(VW, VH) * 0.42;
+      ctx.save(); ctx.shadowBlur = 0;
+      if (gold) {
+        // 스코프 바깥 어둡게 (렌즈 느낌)
+        ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.beginPath(); ctx.rect(0, 0, VW, VH); ctx.arc(cx, cy, R, 0, 7); ctx.fill('evenodd');
+        // 금테두리: 굵은 링 + 안쪽 얇은 링 + 광택
+        const g = ctx.createLinearGradient(cx - R, cy - R, cx + R, cy + R);
+        g.addColorStop(0, '#fff3b0'); g.addColorStop(.3, '#ffd23f'); g.addColorStop(.55, '#b8860b'); g.addColorStop(.8, '#ffd23f'); g.addColorStop(1, '#fff3b0');
+        ctx.strokeStyle = g; ctx.lineWidth = 12; ctx.shadowColor = '#ffb300'; ctx.shadowBlur = 18;
+        ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.stroke();
+        ctx.shadowBlur = 0; ctx.lineWidth = 2; ctx.strokeStyle = '#ffe680';
+        ctx.beginPath(); ctx.arc(cx, cy, R - 12, 0, 7); ctx.stroke();
+        ctx.beginPath(); ctx.arc(cx, cy, R * 0.45, 0, 7); ctx.stroke();
+        // 금색 눈금
+        ctx.lineWidth = 3; ctx.strokeStyle = '#ffd23f'; ctx.beginPath();
+        for (let k = 0; k < 4; k++) { const a = k * Math.PI / 2; ctx.moveTo(cx + Math.cos(a) * (R - 26), cy + Math.sin(a) * (R - 26)); ctx.lineTo(cx + Math.cos(a) * (R + 6), cy + Math.sin(a) * (R + 6)); }
+        ctx.stroke();
+      }
+      ctx.strokeStyle = gold ? '#ffd23f' : '#000'; ctx.lineWidth = 2; ctx.beginPath();
+      ctx.moveTo(cx - 140, cy); ctx.lineTo(cx + 140, cy);
+      ctx.moveTo(cx, cy - 140); ctx.lineTo(cx, cy + 140); ctx.stroke();
+      ctx.fillStyle = '#f22'; ctx.fillRect(cx - 2, cy - 2, 4, 4); ctx.restore();
     }
 
     // Action Prompts
