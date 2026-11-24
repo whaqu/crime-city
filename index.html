@@ -1843,7 +1843,7 @@
     lgClock(x, y); lgCoins(x, y, 10, 46, 260); lgRain = { x, y, t: 1.4 };
     for (let i = 0; i < 70; i++) { const a = rnd(0, 6.283), v = rnd(80, 340); lgP(x, y, 6, Math.cos(a) * v, Math.sin(a) * v, rnd(60, 300), { col: cols[i % 4], life: rnd(0.5, 1.1), sz: rnd(1.4, 3.4), g: 380 }); }
     boom(x, y, 270, 520); MP.pvpRad(x, y, 200, 70, 9); thunderChain(x, y);
-    money += 20000; voidAdd(x, y); timeWarp();
+    money += 20000; voidAdd(x, y, 7); timeWarp();   // 합일의 공허 균열은 7초 (일반 공허 인첸트는 15초 그대로)
     lgFlash('rgba(255,250,225,1)', 0.8, 700, true); shake = Math.max(shake, 20); playSound('converge'); lgPop(x, y, 40, '+$20,000', '#fff2a0', true, true);
   }
   // ---- 🌩️ 뇌신: 낙뢰 + 번개 연쇄 + 감전 정지
@@ -1884,7 +1884,8 @@
 
   // ---- 🌌 공허: 공허의 균열 (15초 · 최대 3개) · 소멸 시 대폭발
   const voidCount = () => { let n = 0; for (const w of wells) if (w.vd) n++; return n; };
-  function voidAdd(x, y) {
+  function voidAdd(x, y, dur) {
+    dur = dur || 15;
     if (voidCount() >= 3) { const old = wells.find(w => w.vd); if (old) old.t = 0; }   // 4번째부터는 가장 오래된 균열이 터져요
     const z = 36, mk = (geo, mt) => new THREE.Mesh(geo, mt);
     const m = mk(new THREE.SphereGeometry(1, 16, 16), new THREE.MeshBasicMaterial({ color: 0x000000 }));
@@ -1892,7 +1893,7 @@
     const rg2 = mk(new THREE.TorusGeometry(1, 0.06, 8, 40), lgMat(0xff4df0, 0.8)), rg3 = mk(new THREE.TorusGeometry(1, 0.05, 8, 40), lgMat(0x6fd8ff, 0.7));
     const halo = mk(new THREE.SphereGeometry(1, 16, 16), lgMat(0x7a2cff, 0.28)), gr = mk(lgGeo.ring, lgMat(0xa65cff, 0.3)); gr.rotation.x = -Math.PI / 2;
     for (const o of [m, rg, rg2, rg3, halo, gr]) { o.position.set(x, o === gr ? 2.5 : z, y); o.scale.setScalar(0.01); sc.add(o); }
-    wells.push({ x, y, z, t: 15, T0: 15, long: 0, vd: 1, S: lgS(), m, rg, rg2, rg3, halo, gr, ex: [rg2, rg3, halo, gr] });
+    wells.push({ x, y, z, t: dur, T0: dur, long: 0, vd: 1, S: lgS(), m, rg, rg2, rg3, halo, gr, ex: [rg2, rg3, halo, gr] });
     lgRing(x, y, 0xc27bff, 10, 260, 0.8); lgFlash('rgba(60,10,110,1)', 0.45, 700); shake = Math.max(shake, 6); lgBanner('🌌 공허의 균열', '#c9a0ff'); playSound('void');
   }
   function voidVis(w, k) {
