@@ -1697,6 +1697,7 @@
   function lgFlash(bg, a, ms, force) { if (!force && lgSNow.n === 4) return; lgFl.style.transition = 'none'; lgFl.style.background = bg; lgFl.style.opacity = String(a); void lgFl.offsetWidth; lgFl.style.transition = 'opacity ' + ms + 'ms ease-out'; lgFl.style.opacity = '0'; }
   function lgBanner(text, col, sub, force) {
     if (!force && lgSNow.n === 4) return;   // 레전드 합일 중에는 개별 타이틀을 끄고 합일 타이틀만 보여요
+    if (performance.now() < lgFuT) return;   // v23: 합일 타이틀이 떠 있는 동안엔 다른 타이틀(무기 포함)을 띄우지 않아요
     if (lgBnEl) lgBnEl.remove(); const d = document.createElement('div'); d.className = 'lgbn'; d.style.color = col; d.innerHTML = text + (sub ? '<small>' + sub + '</small>' : '');
     document.body.appendChild(d); lgBnEl = d; setTimeout(() => { d.remove(); if (lgBnEl === d) lgBnEl = null; }, 1700);
   }
@@ -1778,7 +1779,9 @@
     else { dmgCar(o, dmg); if (cars.includes(o)) { o.stun = Math.max(o.stun || 0, 1.2); o.v *= 0.2; } }
   }
   function lgCoins(x, y, z, n, spd) { for (let i = 0; i < n; i++) { const a = rnd(0, 6.283), v = rnd(30, spd); lgP(x, y, z, Math.cos(a) * v, Math.sin(a) * v, rnd(120, 340), { col: 0xffc933, coin: true, life: rnd(1, 1.5), g: 560 }); } }
+  let lgFuT = 0;
   function lgFuBanner(title, sub) {
+    lgFuT = performance.now() + 2500; if (lgBnEl) { lgBnEl.remove(); lgBnEl = null; }
     if (lgFuEl) lgFuEl.remove(); const d = document.createElement('div'); d.className = 'lgfu'; d.innerHTML = '<b>' + title + '</b><small>' + sub + '</small>';
     document.body.appendChild(d); lgFuEl = d; setTimeout(() => { d.remove(); if (lgFuEl === d) lgFuEl = null; }, 2500);
   }
@@ -1983,7 +1986,7 @@
   function legWeapon(kind, x, y) {
     shake = Math.max(shake, 10);
     if (kind === 'dragon') {
-      lgBanner('🐉 화룡 강림', '#ff7a2a', '불기둥 연쇄 폭발', true); lgFlash('radial-gradient(circle,rgba(255,140,40,.55),rgba(120,20,0,0) 70%)', 0.9, 700, true); playSound('boom');
+      lgBanner('🐉 화룡 강림', '#ff7a2a', '불기둥 연쇄 폭발'); lgFlash('radial-gradient(circle,rgba(255,140,40,.55),rgba(120,20,0,0) 70%)', 0.9, 700, true); playSound('boom');
       lgRing(x, y, 0xff6a1a, 20, 260, 0.9); lgRing(x, y, 0xffd23f, 10, 180, 0.7);
       for (let i = 0; i < 12; i++) lgDelay(i * 0.1, () => {
         const a = i * 0.95, r = 14 + i * 16, px = x + Math.cos(a) * r, py = y + Math.sin(a) * r;
@@ -1992,7 +1995,7 @@
       });
       lgDelay(1.3, () => { boom(x, y, 170, 320); napAdd(x, y, 7); lgRing(x, y, 0xff3a10, 20, 340, 1.0); lgColumn(x, y, 0xffe27a, 60, 520, 0.9, 0.8); shake = Math.max(shake, 16); lgFlash('radial-gradient(circle,rgba(255,200,80,.7),rgba(255,60,0,0) 70%)', 1, 600, true); lgPop(x, y, 60, '🔥 지옥불', '#ff9a3a', true, true); });
     } else if (kind === 'ice') {
-      lgBanner('❄️ 절대영도', '#8fe8ff', '모든 것이 얼어붙는다', true); lgFlash('radial-gradient(circle,rgba(190,240,255,.65),rgba(40,90,160,.2) 80%)', 1, 900, true); playSound('warp');
+      lgBanner('❄️ 절대영도', '#8fe8ff', '모든 것이 얼어붙는다'); lgFlash('radial-gradient(circle,rgba(190,240,255,.65),rgba(40,90,160,.2) 80%)', 1, 900, true); playSound('warp');
       const R = 420, WT = 1.0; let c = 0;
       const tg = lgTargets(x, y, R).map(e => (e.hit = 0, e));
       const wave = new THREE.Mesh(lgGeo.ring, lgMat(0xbff3ff, 0.95)); wave.rotation.x = -Math.PI / 2; wave.position.set(x, 4, y);
@@ -2022,7 +2025,7 @@
         lgPop(x, y, 60, '💥 산산조각', '#ffffff', true, true);
       });
     } else if (kind === 'sword') {
-      lgBanner('🗡️ 천검우', '#e6dcff', '하늘의 검이 쏟아진다', true); lgFlash('radial-gradient(circle,rgba(190,170,255,.5),rgba(30,10,80,.25) 80%)', 0.9, 900, true); playSound('siren');
+      lgBanner('🗡️ 천검우', '#e6dcff', '하늘의 검이 쏟아진다'); lgFlash('radial-gradient(circle,rgba(190,170,255,.5),rgba(30,10,80,.25) 80%)', 0.9, 900, true); playSound('siren');
       lgRing(x, y, 0xb9a6ff, 240, 20, 1.4, 2.5, 0.8);
       const sword = (px, py, big, T) => {
         const g = new THREE.Group(), mats = [], mk = (geo, col, o2) => { const mt = lgMat(col, o2); mats.push([mt, o2]); const m = new THREE.Mesh(geo, mt); g.add(m); return m; };
