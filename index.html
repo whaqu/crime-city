@@ -449,7 +449,7 @@
     { n: '천벌', mag: 3, cd: 1.5, dmg: 0, pel: 1, sp: 0, rel: 4, v: 2400, life: 1.6, h: 0.5, k: 6, col: 0xffd23f, sz: 3, len: 4, orb: 1, leg: 1, tip: '👑 레전드 · 맞춘 곳에 궤도 포격! 1.4초 뒤 십자 5연속 대폭발' },
     { n: '유성포', mag: 5, cd: 1.1, dmg: 0, pel: 1, sp: 0, rel: 3.2, v: 2200, life: 1.5, h: 0.5, k: 5, col: 0xff8a3c, sz: 2.6, len: 3.4, orb: 1, lite: 1, leg: 1, tip: '☄️ 레전드(보급형) · 맞춘 곳에 1초 뒤 유성 3발 낙하 · 천벌보다 약하고 싸요' },
     { n: '화룡포', mag: 4, cd: 1.3, dmg: 0, pel: 1, sp: 0, rel: 3.6, v: 2200, life: 1.5, h: 0.5, k: 5, col: 0xff5a1a, sz: 2.8, len: 3.6, lgw: 'dragon', leg: 1, tip: '🐉 레전드 · 맞춘 곳에서 불기둥이 나선형으로 연쇄 폭발 + 지옥불 장판' },
-    { n: '절대영도', mag: 3, cd: 1.6, dmg: 0, pel: 1, sp: 0, rel: 4, v: 2400, life: 1.6, h: 0.5, k: 5, col: 0x8fe8ff, sz: 2.8, len: 3.8, lgw: 'ice', leg: 1, tip: '❄️ 레전드 · 맞춘 곳 주변을 4초 동결(경찰·차량 정지) 후 얼음이 산산조각 폭발' },
+    { n: '절대영도', mag: 3, cd: 1.6, dmg: 0, pel: 1, sp: 0, rel: 4, v: 2400, life: 1.6, h: 0.5, k: 5, col: 0x8fe8ff, sz: 2.8, len: 3.8, lgw: 'ice', leg: 1, tip: '❄️ 레전드 · 맞춘 곳에서 원형 충격파가 사방으로 쫙 퍼지며 닿는 적을 4초 동결 → 얼음 산산조각 폭발' },
     { n: '천검우', mag: 3, cd: 1.8, dmg: 0, pel: 1, sp: 0, rel: 4.4, v: 2400, life: 1.6, h: 0.5, k: 6, col: 0xe6dcff, sz: 3, len: 4, lgw: 'sword', leg: 1, tip: '🗡️ 레전드 · 하늘에서 검 8자루가 차례로 꽂히고 거대한 천검이 마무리' }
   ], am = WP.map(w => w.mag);
 
@@ -1993,19 +1993,31 @@
       lgDelay(1.3, () => { boom(x, y, 170, 320); napAdd(x, y, 7); lgRing(x, y, 0xff3a10, 20, 340, 1.0); lgColumn(x, y, 0xffe27a, 60, 520, 0.9, 0.8); shake = Math.max(shake, 16); lgFlash('radial-gradient(circle,rgba(255,200,80,.7),rgba(255,60,0,0) 70%)', 1, 600, true); lgPop(x, y, 60, '🔥 지옥불', '#ff9a3a', true, true); });
     } else if (kind === 'ice') {
       lgBanner('❄️ 절대영도', '#8fe8ff', '모든 것이 얼어붙는다', true); lgFlash('radial-gradient(circle,rgba(190,240,255,.65),rgba(40,90,160,.2) 80%)', 1, 900, true); playSound('warp');
-      const R = 270; let c = 0;
-      for (const o of offs) if (o.dead <= 0 && Math.hypot(o.x - x, o.y - y) < R) { o.fz = 4; c++; }
-      for (const car of cars) if (car.type === 'c' && car !== P.car && !car.disp && Math.hypot(car.x - x, car.y - y) < R) { car.stun = Math.max(car.stun || 0, 4); car.v *= 0.05; c++; }
-      lgRing(x, y, 0x8fe8ff, 10, R, 0.8); lgRing(x, y, 0xffffff, 10, R * 0.7, 0.6); lgRing(x, y, 0x4aa8ff, 10, R * 1.15, 1.1);
-      for (let i = 0; i < 16; i++) {
-        const a = i / 16 * 6.283, r = R * (0.5 + 0.45 * ((i * 7) % 5) / 4), px = x + Math.cos(a) * r, py = y + Math.sin(a) * r, h = 50 + (i % 4) * 22;
-        const m = new THREE.Mesh(new THREE.ConeGeometry(7 + (i % 3) * 2, 1, 5), lgMat(i % 2 ? 0xd8f8ff : 0x8fe8ff, 0.8)); m.position.set(px, 0, py);
-        lgAdd(1.7, [m], k => { const g = Math.min(1, k * 6); m.scale.y = h * g; m.position.y = h * g / 2; m.material.opacity = k < 0.75 ? 0.8 : 0.8 * (1 - k) * 4; });
+      const R = 420, WT = 1.0; let c = 0;
+      const tg = lgTargets(x, y, R).map(e => (e.hit = 0, e));
+      const wave = new THREE.Mesh(lgGeo.ring, lgMat(0xbff3ff, 0.95)); wave.rotation.x = -Math.PI / 2; wave.position.set(x, 4, y);
+      const wave2 = new THREE.Mesh(lgGeo.ring, lgMat(0x4aa8ff, 0.6)); wave2.rotation.x = -Math.PI / 2; wave2.position.set(x, 3, y);
+      lgAdd(WT + 0.25, [wave, wave2], k => {
+        const kk = Math.min(1, k * (WT + 0.25) / WT), r = R * (1 - Math.pow(1 - kk, 2.2));
+        wave.scale.setScalar(Math.max(1, r)); wave2.scale.setScalar(Math.max(1, r * 0.86)); wave.material.opacity = 0.95 * (1 - k * 0.8); wave2.material.opacity = 0.6 * (1 - k);
+        for (const e of tg) if (!e.hit && e.d < r) {
+          e.hit = 1; c++; lgHit(e.k, e.o, 90);
+          if (e.k === 'o') e.o.fz = 4; else if (e.k === 'c' && cars.includes(e.o)) { e.o.stun = Math.max(e.o.stun || 0, 4); e.o.v *= 0.05; }
+          lgSpark(e.x, e.y, 10, 0xd8f8ff, 6);
+        }
+      });
+      lgRing(x, y, 0xffffff, 10, R * 0.6, 0.6); lgRing(x, y, 0x4aa8ff, 10, R * 1.1, 1.2);
+      for (let i = 0; i < 28; i++) {
+        const a = i / 28 * 6.283 + (i % 2) * 0.1, r = R * (0.2 + 0.8 * ((i * 11) % 7) / 6), px = x + Math.cos(a) * r, py = y + Math.sin(a) * r, h = 46 + (i % 4) * 22;
+        lgDelay(WT * (1 - Math.pow(1 - r / R, 1 / 2.2)), () => {
+          const m = new THREE.Mesh(new THREE.ConeGeometry(7 + (i % 3) * 2, 1, 5), lgMat(i % 2 ? 0xd8f8ff : 0x8fe8ff, 0.8)); m.position.set(px, 0, py);
+          lgAdd(1.1, [m], k => { const g = Math.min(1, k * 7); m.scale.y = h * g; m.position.y = h * g / 2; m.material.opacity = k < 0.7 ? 0.8 : 0.8 * (1 - k) * 3.3; });
+        });
       }
-      for (let i = 0; i < 40; i++) lgP(x + rnd(-R, R), y + rnd(-R, R), rnd(120, 260), rnd(-8, 8), rnd(-8, 8), rnd(-60, -25), { col: 0xffffff, life: 1.6, sz: rnd(1.2, 2.4), op: 0.9 });
-      if (c) lgPop(x, y, 70, '❄️ ' + c + '명 동결', '#bff3ff', true, true);
-      lgDelay(1.7, () => {
-        boom(x, y, R, 280); lgRing(x, y, 0xffffff, 20, R * 1.3, 0.7); shake = Math.max(shake, 14); lgFlash('radial-gradient(circle,rgba(255,255,255,.75),rgba(120,200,255,0) 70%)', 1, 500, true);
+      for (let i = 0; i < 50; i++) lgP(x + rnd(-R, R), y + rnd(-R, R), rnd(120, 260), rnd(-8, 8), rnd(-8, 8), rnd(-60, -25), { col: 0xffffff, life: 1.6, sz: rnd(1.2, 2.4), op: 0.9 });
+      lgDelay(WT, () => { if (c) lgPop(x, y, 70, '❄️ ' + c + '명 동결', '#bff3ff', true, true); });
+      lgDelay(1.9, () => {
+        boom(x, y, 200, 260); lgRing(x, y, 0xffffff, 20, 260, 0.7); shake = Math.max(shake, 14); lgFlash('radial-gradient(circle,rgba(255,255,255,.75),rgba(120,200,255,0) 70%)', 1, 500, true);
         for (let k = 0; k < 46; k++) { const a = rnd(0, 6.283), v = rnd(80, 320); lgP(x, y, 8, Math.cos(a) * v, Math.sin(a) * v, rnd(80, 320), { col: k % 3 ? 0xd8f8ff : 0x7fd0ff, life: rnd(0.5, 1.0), sz: rnd(1.5, 3.4), g: 420 }); }
         lgPop(x, y, 60, '💥 산산조각', '#ffffff', true, true);
       });
@@ -3691,7 +3703,7 @@
     const PRICES = {}, GS = { stock: {}, ok: false };
     const ITEMS = [
       { id: 'leg3', ic: '🗡️', n: '천검우 (레전드)', d: '3발 · 하늘에서 검 8자루 + 거대 천검 마무리', p: 250000000, w: 24, gold: 1 },
-      { id: 'leg4', ic: '❄️', n: '절대영도 (레전드)', d: '3발 · 4초 동결 후 얼음 산산조각 폭발', p: 180000000, w: 23, gold: 1 },
+      { id: 'leg4', ic: '❄️', n: '절대영도 (레전드)', d: '3발 · 원형 충격파가 퍼지며 4초 동결 후 산산조각 폭발', p: 180000000, w: 23, gold: 1 },
       { id: 'leg5', ic: '🐉', n: '화룡포 (레전드)', d: '4발 · 불기둥 나선 연쇄 폭발 + 지옥불 장판', p: 120000000, w: 22, gold: 1 },
       { id: 'leg2', ic: '☄️', n: '유성포 (레전드 보급형)', d: '5발 · 맞춘 곳에 1초 뒤 유성 3발 낙하 (천벌보다 약함)', p: 80000000, w: 21, gold: 1 },
       { id: 'leg', ic: '👑', n: '천벌 (레전드)', d: '3발 · 맞춘 곳에 궤도 포격 · 십자 5연속 대폭발', p: 300000000, w: 20, gold: 1 },
@@ -4354,7 +4366,8 @@
     }
 
     // ---------------------------------------------------------------- 무기 강화소 (강화 최대 +99 · 인첸트 탭은 이용권($50,000)을 사야 열림)
-    let enTab = 'enh', enT = null, enPick = false, enSelK = null;   // enT: { s: 'h', i } 핫바 무기 · { s: 'v', n } 인벤토리 무기
+    let enTab = 'enh', enT = null, enPick = false, enSelK = null, enLgK = null;
+    const LG_ATT_COST = 100000, LG_ATT_P = 0.1;   // enT: { s: 'h', i } 핫바 무기 · { s: 'v', n } 인벤토리 무기
     const enNote = (t, ok) => { $('enRes').style.color = ok ? '#6f6' : '#f66'; $('enRes').textContent = t; };
     const tOk = t => t && (t.s === 'h' ? (WP[t.i] && !WP[t.i].off && (t.i < 6 || own[t.i])) : !!(Array.isArray(own.inv) && own.inv[t.n]));
     const tW = t => t.s === 'h' ? t.i : own.inv[t.n].w;
@@ -4396,6 +4409,19 @@
             + `<div class="btn o${mx || money < cost ? ' dis' : ''}" data-en="1">${mx ? 'MAX' : (same ? `Lv${nl} 강화 ${fmt(cost)}` : (cur ? `교체 ${fmt(cost)}` : `부여 ${fmt(cost)}`))}</div>`
             + `<div class="ds" style="flex-basis:100%;margin:0">${e.ic} ${e.n} ${[1, 2, 3].map(l => `<b${(cur && cur[0] === sel && cur[1] === l) ? ' style="color:#ffd23f"' : ''}>Lv${l}</b>: ${e.d(e.v[l - 1])}`).join(' · ')}</div></div>`;
         }
+        { const L0 = tEn(enT), base = L0[0], have = L0.map(x => x[0]);
+          const lgl = ENCH.map((e, k) => [e, k]).filter(([e, k]) => e.leg && enchOk(w, e) && !have.includes(k));
+          if (base && !ENCH[base[0]].leg && base[1] >= 3) {
+            if (!lgl.length || L0.length >= 10) h += '<div class="ds" style="margin-top:8px;text-align:center;color:#ffd23f">👑 붙일 수 있는 레전드가 더 없어요</div>';
+            else {
+              if (enLgK === null || !lgl.some(([, k]) => k === enLgK)) enLgK = lgl[0][1];
+              h += `<div class="row" style="flex-wrap:wrap;margin-top:8px;border:1px solid #ffd23f55"><div class="nm" style="min-width:150px;color:#ffd23f">👑 레전드 추가 부착<div class="ds">Lv3 인첸트가 있어서 해금! 하나를 골라 ${fmt(LG_ATT_COST)}을 내고 ${Math.round(LG_ATT_P * 100)}% 확률로 추가 부착 (실패해도 돈은 나가요)</div></div>`
+                + `<select class="es lgs">${lgl.map(([x, k]) => `<option value="${k}"${k === enLgK ? ' selected' : ''}>${x.ic} ${x.n}</option>`).join('')}</select>`
+                + `<div class="btn o${money < LG_ATT_COST ? ' dis' : ''}" data-lgatt="1">🎲 도전 ${fmt(LG_ATT_COST)}</div>`
+                + `<div class="ds" style="flex-basis:100%;margin:0">${ENCH[enLgK].ic} ${ENCH[enLgK].n}: ${ENCH[enLgK].d(ENCH[enLgK].v[0])}</div></div>`;
+            }
+          } else if (base && !ENCH[base[0]].leg) h += `<div class="ds" style="margin-top:8px;text-align:center;color:#9fb3c8">🔒 인첸트를 Lv3까지 올리면 👑 레전드를 추가로 붙일 수 있어요 (${fmt(LG_ATT_COST)} · ${Math.round(LG_ATT_P * 100)}%)</div>`;
+        }
         h += '<div class="ds" style="text-align:center;margin-top:6px">새 인첸트를 부여할 때마다 10% 확률로 👑 레전드 인첸트(뇌신·미다스·공허·시간 지배)가 대신 붙어요 · 다른 인첸트로 교체하면 기존 인첸트는 사라져요 · 인첸트는 경매에 팔 때 무기와 함께 가요</div>';
         h += '<div class="ds" style="margin:12px 0 4px;font-weight:800;color:#ffd23f;font-size:13px">👑 레전드 인첸트 도감</div>' + ENCH.filter(e => e.leg).map(e => `<div class="row"><div class="nm">${e.ic} ${e.n}<div class="ds">${e.d(e.v[0])}</div></div></div>`).join('')
           + '<div class="ds" style="margin:12px 0 4px;font-weight:800;color:#c9a6ff;font-size:13px">🔗 겹침 시너지 (한 무기에 레전드 인첸트를 겹치세요)</div>' + [...LG_SYN, LG_ALL].map(y => `<div class="row"><div class="nm">${y.ic} ${y.n} <span style="font-size:11px;color:#9fb3c8">${y.k.map(id => ENCH.find(e => e.id === id).n).join(' + ')}</span><div class="ds">${y.d}</div></div></div>`).join('');
@@ -4411,9 +4437,9 @@
       const t = e.target.closest('.btn'); if (!t) return;
       if (t.dataset.pickbtn) { enPick = !enPick; renderEnh(); return; }
       if (!enT || !tOk(enT)) return;
-      if (t.dataset.i !== undefined) enhance(); else if (t.dataset.en !== undefined) enchant();
+      if (t.dataset.i !== undefined) enhance(); else if (t.dataset.en !== undefined) enchant(); else if (t.dataset.lgatt !== undefined) lgAttach();
     });
-    enhEl.addEventListener('change', e => { const s = e.target.closest('.es'); if (s) { enSelK = +s.value; renderEnh(); } });
+    enhEl.addEventListener('change', e => { const s = e.target.closest('.es'); if (s) { if (s.classList.contains('lgs')) enLgK = +s.value; else enSelK = +s.value; renderEnh(); } });
     function enhance() {
       const t = enT, w = tW(t), lv = tLv(t); if (lv >= ENH_MAX) return;
       const cost = enhCost(lv); if (money < cost) { enNote(`돈이 부족해요 (${fmt(cost - money)} 더 필요)`, 0); playSound('shoot'); return; }
@@ -4429,6 +4455,17 @@
       }
       saveOwn(); renderEnh();
     }
+    function lgAttach() {
+      const t = enT; if (!t || !own.ench) return; const w = tW(t), L = tEn(t), base = L[0], k = enLgK;
+      if (!base || ENCH[base[0]].leg || base[1] < 3 || k === null || !ENCH[k] || !ENCH[k].leg || !enchOk(w, ENCH[k]) || L.some(x => x[0] === k) || L.length >= 10) return;
+      if (money < LG_ATT_COST) { enNote(`돈이 부족해요 (${fmt(LG_ATT_COST - money)} 더 필요)`, 0); playSound('shoot'); return; }
+      money -= LG_ATT_COST; const le = ENCH[k];
+      if (Math.random() < LG_ATT_P) {
+        L.push([k, 1]); tSetEn(t, L); saveOwn(); playSound('cash');
+        enNote(`👑 레전드 부착 성공! ${WP[w].n} · ${le.ic} ${le.n} — ${le.d(le.v[0])}`, 1); title('👑 레전드 부착 성공!', `${WP[w].n} · ${le.ic} ${le.n}`, '#ffd23f'); event(`님이 ${WP[w].n}에 👑 레전드 ${le.ic} ${le.n}를 부착했습니다!!`);
+      } else { saveOwn(); playSound('shoot'); enNote(`💨 실패… ${le.ic} ${le.n} 부착 실패 (-${fmt(LG_ATT_COST)})`, 0); }
+      renderEnh();
+    }
     function enchant() {
       if (!own.ench) { enNote('인첸트 이용권이 필요해요', 0); return; }
       const t = enT, w = tW(t), sel = enSelK; if (sel === null || !ENCH[sel] || !enchOk(w, ENCH[sel])) return;
@@ -4440,7 +4477,7 @@
         const lg = ENCH.map((e, k) => [e, k]).filter(([e]) => e.leg && enchOk(w, e));
         if (lg.length) { const [le, lk] = lg[Math.floor(Math.random() * lg.length)]; tSetEn(t, [lk, 3]); saveOwn(); playSound('cash'); enNote(`👑 레전드 인첸트 대박! ${WP[w].n} · ${le.ic} ${le.n} — ${le.d(le.v[2])}`, 1); title('👑 레전드 인첸트!', `${WP[w].n} · ${le.ic} ${le.n}`, '#ffd23f'); event(`님이 ${WP[w].n}에 👑 레전드 인첸트 ${le.ic} ${le.n}를 뽑았습니다!!`); renderEnh(); return; }
       }
-      { const L = tEn(t); if (same && L.length > 1) { L[0] = [sel, nl]; tSetEn(t, L); } else tSetEn(t, [sel, nl]); } saveOwn(); playSound('cash');
+      { const L = tEn(t); if (same && L.length > 1) { L[0] = [sel, nl]; tSetEn(t, L); } else tSetEn(t, [[sel, nl]].concat(L.filter(x => ENCH[x[0]].leg))); }   // v23: 부착한 레전드는 교체해도 유지 saveOwn(); playSound('cash');
       enNote(`🔮 ${WP[w].n} · ${ENCH[sel].ic} ${ENCH[sel].n} Lv${nl}`, 1);
       if (nl === 3) event(`님이 ${WP[w].n}에 ${ENCH[sel].ic} ${ENCH[sel].n} Lv3 인첸트를 완성했습니다!`);
       renderEnh();
