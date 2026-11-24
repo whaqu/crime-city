@@ -487,7 +487,7 @@
     { n: '끈끈이 폭탄총', mag: 6, cd: 0.55, dmg: 0, pel: 1, sp: 0, rel: 2, v: 900, life: 1, h: 0.3, k: 2, col: 0xff3355, sz: 2, len: 2, stk: 1, tip: '차에 붙으면 2.5초 뒤 쾅 · 벽·바닥에도 붙음' },
     { n: '천벌', mag: 3, cd: 1.5, dmg: 0, pel: 1, sp: 0, rel: 4, v: 2400, life: 1.6, h: 0.5, k: 6, col: 0xffd23f, sz: 3, len: 4, orb: 1, leg: 1, tip: '👑 레전드 · 맞춘 곳에 궤도 포격! 1.4초 뒤 십자 5연속 대폭발' },
     { n: '유성포', mag: 5, cd: 1.1, dmg: 0, pel: 1, sp: 0, rel: 3.2, v: 2200, life: 1.5, h: 0.5, k: 5, col: 0xff8a3c, sz: 2.6, len: 3.4, orb: 1, lite: 1, leg: 1, tip: '☄️ 레전드(보급형) · 맞춘 곳에 1초 뒤 유성 3발 낙하 · 천벌보다 약하고 싸요' },
-    { n: '천리안', mag: 4, cd: 1.5, dmg: 0, pel: 0, sp: 0, rel: 3.2, v: 0, life: 0, h: 0.5, k: 8, col: 0xffe27a, sz: 1, len: 4.2, hs: 1, lsn: 1, leg: 1, tip: '🎯 레전드 저격총 · 우클릭/Z 스코프 · 모든 것을 관통하는 황금 광선 + 끝에서 낙뢰 폭발' },
+    { n: '헬리오스', mag: 4, cd: 1.5, dmg: 0, pel: 0, sp: 0, rel: 3.2, v: 0, life: 0, h: 0.5, k: 8, col: 0xffe27a, sz: 1, len: 4.2, hs: 1, lsn: 1, leg: 1, tip: '🎯 레전드 저격총 · 우클릭/Z 스코프 · 모든 것을 관통하는 황금 광선 + 끝에서 낙뢰 폭발' },
     { n: '절대영도', mag: 3, cd: 1.6, dmg: 0, pel: 0, self: 1, sp: 0, rel: 4, v: 2400, life: 1.6, h: 0.5, k: 5, col: 0x8fe8ff, sz: 2.8, len: 3.8, lgw: 'ice', leg: 1, tip: '❄️ 레전드 · 총알 없이 내 위치에서 원형 충격파가 사방으로 쫙 퍼지며 닿는 적을 4초 동결 → 얼음 산산조각 폭발' },
     { n: '천검우', mag: 3, cd: 1.8, dmg: 0, pel: 1, sp: 0, rel: 4.4, v: 2400, life: 1.6, h: 0.5, k: 6, col: 0xe6dcff, sz: 3, len: 4, lgw: 'sword', leg: 1, tip: '🗡️ 레전드 · 하늘에서 검 8자루가 차례로 꽂히고 거대한 천검이 마무리' }
   ], am = WP.map(w => w.mag);
@@ -532,7 +532,7 @@
 
   const pp = p => p.beach ? [p.x, p.y] : [p.h ? p.t : p.k * B + p.off, p.h ? p.k * B + p.off : p.t];
 
-  // v23: 천리안(레전드 저격총) — 모든 것을 관통하는 황금 광선, 끝(벽/최대 사거리)에서 낙뢰 폭발
+  // v23: 헬리오스(레전드 저격총) — 모든 것을 관통하는 황금 광선, 끝(벽/최대 사거리)에서 낙뢰 폭발
   function legSnipe(E) {
     E = E || {};
     const a = MP.aimA(), dx = Math.cos(a), dy = Math.sin(a), sl = MP.aimSl(P.z + 9), dm = 420 * dmgMul(MP.wlv(22)) * (E.crit ? 2.5 : 1); let z = P.z + 9;
@@ -550,8 +550,8 @@
     for (const h of hits.slice(0, 10)) { lgRing(h[0], h[1], 0xffe27a, 8, 90, 0.5); lgSpark(h[0], h[1], 14, 0xfff2a0, 8); }
     for (const h of hits.slice(0, 6)) lgSkyBolt(h[0], h[1], 0xffe27a);
     shake = Math.max(shake, 12); lgFlash('radial-gradient(circle,rgba(255,230,140,.35),rgba(255,200,60,0) 70%)', 0.7, 400);
-    lgBanner('🎯 천리안', '#ffd23f', hits.length ? '관통 ' + hits.length + '명' : '황금 광선');
-    lgDelay(0.3, () => { lgSkyBolt(ex, ey, 0xffe27a); lgColumn(ex, ey, 0xffd23f, 24, 620, 0.7, 0.8); lgRing(ex, ey, 0xffe27a, 10, 180, 0.7); boom(ex, ey, 120, 260); });
+    lgBanner('🎯 헬리오스', '#ffd23f', hits.length ? '관통 ' + hits.length + '명' : '황금 광선');
+    lgDelay(0.3, () => { if (E.lgd) lgRunAt(E.lgd, ex, ey); lgSkyBolt(ex, ey, 0xffe27a); lgColumn(ex, ey, 0xffd23f, 24, 620, 0.7, 0.8); lgRing(ex, ey, 0xffe27a, 10, 180, 0.7); boom(ex, ey, 120, 260); });
   }
   function snipe(E, idx) {
     if (idx === 22) { legSnipe(E); return; }
@@ -577,6 +577,7 @@
       if (!hit && MP.pvpRay(x, y, z, dm, E.hit)) hit = true;
       if (hit) { L = s * 6; break; }
     }
+    if (E.lgd) lgRunAt(E.lgd, P.x + dx * (10 + L), P.y + dy * (10 + L));   // 저격총: 맞은 곳(끝)에서 레전드 효과
     const m = bx(L, 0.5, 0.5, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true }));
     m.position.set(P.x + dx * (10 + L / 2), z, P.y + dy * (10 + L / 2)); m.rotation.y = -a; sc.add(m);
     trc.push({ m, t: 0.15 });
@@ -1471,7 +1472,7 @@
     for (const z of [0.5, 6.5]) add(L1, new THREE.BoxGeometry(5, 0.8, 0.8), 0xffd23f, 12, 12.6, z);
     add(L2, new THREE.CylinderGeometry(2.8, 3.4, 15, 8), 0x3a1608, 10, 9, 3.5).rotation.z = Math.PI / 2; add(L2, new THREE.CylinderGeometry(3.6, 3.6, 2, 8), 0xff6a1a, 6, 9, 3.5).rotation.z = Math.PI / 2; add(L2, new THREE.CylinderGeometry(3.6, 3.6, 2, 8), 0xff6a1a, 13, 9, 3.5).rotation.z = Math.PI / 2;
     add(L2, new THREE.ConeGeometry(3.4, 5, 8), 0xff9a2a, 19.5, 9, 3.5).rotation.z = -Math.PI / 2; const orb2 = add(L2, new THREE.IcosahedronGeometry(2.4), 0xff4a10, 23.5, 9, 3.5); add(L2, new THREE.BoxGeometry(3, 5.5, 2.4), 0x1a1a1a, 4, 6, 3.5);
-    // v23: 천리안(황금 저격총) · 절대영도(얼음 결정 소총) · 천검우(검 모양 총)
+    // v23: 헬리오스(황금 저격총) · 절대영도(얼음 결정 소총) · 천검우(검 모양 총)
     const L3 = new THREE.Group(), L4 = new THREE.Group(), L5 = new THREE.Group();
     add(L3, new THREE.BoxGeometry(24, 2.4, 2.4), 0x2a2210, 12, 9, 3.5); add(L3, new THREE.BoxGeometry(26, 0.9, 2.8), 0xffd23f, 12, 10.6, 3.5);
     add(L3, new THREE.CylinderGeometry(1.5, 1.5, 9, 8), 0x1a1a1a, 9, 12.6, 3.5).rotation.z = Math.PI / 2; for (const x of [4.8, 13.8]) add(L3, new THREE.CylinderGeometry(1.9, 1.9, 1.2, 8), 0xffe680, x, 12.6, 3.5).rotation.z = Math.PI / 2;
@@ -1866,7 +1867,7 @@
     lgClock(x, y); lgCoins(x, y, 10, 46, 260); lgRain = { x, y, t: 1.4 };
     for (let i = 0; i < 70; i++) { const a = rnd(0, 6.283), v = rnd(80, 340); lgP(x, y, 6, Math.cos(a) * v, Math.sin(a) * v, rnd(60, 300), { col: cols[i % 4], life: rnd(0.5, 1.1), sz: rnd(1.4, 3.4), g: 380 }); }
     boom(x, y, 270, 520); MP.pvpRad(x, y, 200, 70, 9); thunderChain(x, y);
-    money += 20000; voidAdd(x, y, 7); timeWarp();   // 합일의 공허 균열은 7초 (일반 공허 인첸트는 15초 그대로)
+    money += 20000; voidAdd(x, y, 7); timeWarp(x, y);   // 합일의 공허 균열은 7초 (일반 공허 인첸트는 15초 그대로)
     lgFlash('rgba(255,250,225,1)', 0.8, 700, true); shake = Math.max(shake, 20); playSound('converge'); lgPop(x, y, 40, '+$20,000', '#fff2a0', true, true);
   }
   // ---- 🌩️ 뇌신: 낙뢰 + 번개 연쇄 + 감전 정지
@@ -1950,17 +1951,30 @@
     const hm = hand(R * 0.78, 5, 0x7fe0ff), hh = hand(R * 0.5, 8, 0xffffff); g.position.set(x, 3, y);
     lgAdd(3.0, [g], k => { g.scale.setScalar(0.3 + 0.7 * Math.min(1, k * 4)); const sp = 1 - Math.min(1, k * 1.5), ang = sp * sp * 20; hm.rotation.y = ang; hh.rotation.y = ang / 12 + 1; const f = k < 0.65 ? 1 : (1 - k) / 0.35; for (const [mt, op] of mats) mt.opacity = op * f; });
   }
-  function timeWarp() {
+  function timeWarp(cx, cy) {
+    cx = cx === undefined ? P.x : cx; cy = cy === undefined ? P.y : cy;
     const n = performance.now(); if (n - lgTwT < 9000) return; lgTwT = n;
     const R = 480; let c = 0;
-    for (const o of offs) if (Math.hypot(o.x - P.x, o.y - P.y) < R) { o.fz = 3; c++; }
-    for (const car of cars) if (car.type === 'c' && car !== P.car && !car.disp && Math.hypot(car.x - P.x, car.y - P.y) < R) { car.stun = Math.max(car.stun || 0, 3); car.v *= 0.1; c++; }
-    lgFrz = 3; lgClock(P.x, P.y); lgRing(P.x, P.y, 0x7fe0ff, 20, 480, 1.1);
+    for (const o of offs) if (Math.hypot(o.x - cx, o.y - cy) < R) { o.fz = 3; c++; }
+    for (const car of cars) if (car.type === 'c' && car !== P.car && !car.disp && Math.hypot(car.x - cx, car.y - cy) < R) { car.stun = Math.max(car.stun || 0, 3); car.v *= 0.1; c++; }
+    lgFrz = 3; lgClock(cx, cy); lgRing(cx, cy, 0x7fe0ff, 20, 480, 1.1);
     lgFlash('radial-gradient(circle at 50% 50%, rgba(120,200,255,0) 25%, rgba(30,70,150,.75) 100%)', 1, 3000);
     const S = lgS(); let sub = c ? c + '명 정지' : '';
-    if (S.l_thunder) { const tg = lgTargets(P.x, P.y, R).slice(0, 10); for (const e of tg) { lgSkyBolt(e.x, e.y, 0x9fe6ff); lgHit(e.k, e.o, 70); } if (tg.length) sub += ' · 번개 ' + tg.length; }   // 🔗 정지된 심판
-    if (S.l_midas && c) { money += 2000 * c; lgCoins(P.x, P.y, 14, Math.min(40, c * 5), 240); lgPop(P.x, P.y, 40, '+$' + (2000 * c).toLocaleString(), '#ffd23f', true); sub += ' · +$' + (2000 * c).toLocaleString(); }   // 🔗 시간 금화
+    if (S.l_thunder) { const tg = lgTargets(cx, cy, R).slice(0, 10); for (const e of tg) { lgSkyBolt(e.x, e.y, 0x9fe6ff); lgHit(e.k, e.o, 70); } if (tg.length) sub += ' · 번개 ' + tg.length; }   // 🔗 정지된 심판
+    if (S.l_midas && c) { money += 2000 * c; lgCoins(cx, cy, 14, Math.min(40, c * 5), 240); lgPop(cx, cy, 40, '+$' + (2000 * c).toLocaleString(), '#ffd23f', true); sub += ' · +$' + (2000 * c).toLocaleString(); }   // 🔗 시간 금화
     lgBanner('⏳ 시간 정지', '#7fe0ff', sub); playSound('warp'); shake = Math.max(shake, 5);
+  }
+
+  // v23: 레전드/합일 효과를 (x, y) — 총알이 닿은 곳 — 에서 터뜨려요
+  function lgRunAt(lg, x, y) {
+    if (!lg || lg.used) return; lg.used = true; lgSNow = lg.S || lgS();
+    for (const id of lg.ids) {
+      if (id === 'l_thunder') thunderStrike(x, y);
+      else if (id === 'l_midas') { const v = lg.v.l_midas || 3000; money += v; lgN = (lgN + 1) % 10; if (lgN === 0) { money += 50000; midasFx(x, y, 20, true); } else { midasFx(x, y, 20, false); lgPop(x, y, 30, '+$' + v.toLocaleString(), '#ffd23f'); } playSound('cash'); }
+      else if (id === 'l_void') { if (!lg.fuse) voidAdd(x, y); }   // 합일엔 합일 쪽 균열 1개만
+      else if (id === 'l_time') timeWarp(x, y);
+    }
+    if (lg.fuse) lgConverge(x, y);
   }
 
   // ---- 매 프레임: 입자 · 이펙트 · 들고 있는 동안의 오라
@@ -2488,10 +2502,11 @@
         const mkB = (a, dmM) => {
           const bm = new THREE.Mesh(bulG, big ? w.cmat : w.mat);
           bm.scale.setScalar(big ? w.sz * 2 : w.sz); bm.position.set(P.x + Math.cos(a) * 12, 9 + P.z, P.y + Math.sin(a) * 12); sc.add(bm);
-          bul.push({ m: bm, x: bm.position.x, y: bm.position.z, dx: Math.cos(a), dy: Math.sin(a), t: w.life, v: w.v, d: w.dmg * dmgMul(wlv) * (crit ? 2.2 : 1) * (E.crit ? 2.5 : 1) * dmM, w: wi, sx: dmM !== 1 ? 1 : 0, spl: E.split, z: 9 + P.z, vz: MP.aimVz(w.v, 9 + P.z), t0: w.life, pr: (w.pr || 0) + E.pr, pls: w.pls || 0, home: w.home || 0, thru: w.thru || E.thru, fall: w.fall || 0, chain: w.chain || E.chain, bmr: w.bmr || 0, en: E.hit, stl: E.stl });
+          bul.push({ m: bm, x: bm.position.x, y: bm.position.z, dx: Math.cos(a), dy: Math.sin(a), t: w.life, v: w.v, d: w.dmg * dmgMul(wlv) * (crit ? 2.2 : 1) * (E.crit ? 2.5 : 1) * dmM, w: wi, sx: dmM !== 1 ? 1 : 0, lgd: dmM === 1 ? E.lgd : null, spl: E.split, z: 9 + P.z, vz: MP.aimVz(w.v, 9 + P.z), t0: w.life, pr: (w.pr || 0) + E.pr, pls: w.pls || 0, home: w.home || 0, thru: w.thru || E.thru, fall: w.fall || 0, chain: w.chain || E.chain, bmr: w.bmr || 0, en: E.hit, stl: E.stl });
         };
         for (let n = 0; n < w.pel; n++) mkB(MP.aimA() + rnd(-w.sp, w.sp) * (aim ? 0.3 : 1), 1);
-        if (w.self) legWeapon(w.lgw, P.x, P.y, E.split);   // v23: 절대영도는 총알 없이 내 위치에서 발동
+        if (w.self) legWeapon(w.lgw, P.x, P.y, E.split);
+        if (E.lgd && (w.self || (w.pel <= 0 && !w.hs))) { const q = lgAim(); lgRunAt(E.lgd, q[0], q[1]); }   // 총알이 없는 무기는 조준점에서   // v23: 절대영도는 총알 없이 내 위치에서 발동
         if (w.pel > 0) for (let s = 0; s < E.split; s++) mkB(MP.aimA() + (s % 2 ? 1 : -1) * 0.08 * (1 + (s >> 1)), 0.6);
         if (!w.q && !w.self) playSound('shoot'); if (crit) msg('💥 치명타!'); else if (E.crit && !lgSNow.l_time) msg('🎯 급소 명중!'); if (!w.self) MP.shot(P.x, P.y, 9 + P.z + (P.jh || 0), P.a, big ? 0xff3030 : w.col, w.sz, w.v);
         if (w.hs) snipe(E, wi);
@@ -2640,7 +2655,7 @@
         }
       }
       if (!dead && MP.bulletHit(b)) dead = true;
-      if (dead && !b.sx) { const wd = WP[b.w]; if (wd.hole) { let hx = b.x, hy = b.y; if (solid(hx, hy, 0)) { hx -= b.dx * 20; hy -= b.dy * 20; } wellAdd(hx, hy, Math.max(14, b.z)); } if (wd.nap) napAdd(b.x, b.y); if (wd.tp) tpShot(b); if (wd.stk) stkAdd(b); if (wd.orb) orbAdd(b.x, b.y, wd.lite); if (wd.lgw) legWeapon(wd.lgw, b.x, b.y, b.spl); }
+      if (dead && !b.sx) { const wd = WP[b.w]; if (b.lgd) lgRunAt(b.lgd, b.x, b.y); if (wd.hole) { let hx = b.x, hy = b.y; if (solid(hx, hy, 0)) { hx -= b.dx * 20; hy -= b.dy * 20; } wellAdd(hx, hy, Math.max(14, b.z)); } if (wd.nap) napAdd(b.x, b.y); if (wd.tp) tpShot(b); if (wd.stk) stkAdd(b); if (wd.orb) orbAdd(b.x, b.y, wd.lite); if (wd.lgw) legWeapon(wd.lgw, b.x, b.y, b.spl); }
       if (dead && WP[b.w].ember) napAdd(b.x, b.y, 3);
       if (dead && WP[b.w].rk) { boom(b.x, b.y, b.w === 11 ? 80 : 95, b.w === 11 ? 85 : 100); if (WP[b.w].clu) for (let k = 0; k < 3; k++) { const aa = k * 2.094 + Math.random(); boom(b.x + Math.cos(aa) * 55, b.y + Math.sin(aa) * 55, 55, 60); } }
       if (b.stl < 1 && heat > h0) heat = h0 + (heat - h0) * b.stl;   // 은밀 인첸트: 이 탄이 올린 수배만 줄임
@@ -3800,7 +3815,7 @@
     const ITEMS = [
       { id: 'leg3', ic: '🗡️', n: '천검우 (레전드)', d: '3발 · 하늘에서 검 8자루 + 거대 천검 마무리', p: 250000000, w: 24, gold: 1 },
       { id: 'leg4', ic: '❄️', n: '절대영도 (레전드)', d: '3발 · 총알 없이 내 위치에서 원형 충격파가 퍼지며 4초 동결 후 산산조각 폭발', p: 180000000, w: 23, gold: 1 },
-      { id: 'leg5', ic: '🎯', n: '천리안 (레전드 저격총)', d: '4발 · 우클릭 스코프 · 모든 것을 관통하는 황금 광선 + 끝에서 낙뢰 폭발', p: 120000000, w: 22, gold: 1 },
+      { id: 'leg5', ic: '🎯', n: '헬리오스 (레전드 저격총)', d: '4발 · 우클릭 스코프 · 모든 것을 관통하는 황금 광선 + 끝에서 낙뢰 폭발', p: 120000000, w: 22, gold: 1 },
       { id: 'leg2', ic: '☄️', n: '유성포 (레전드 보급형)', d: '5발 · 맞춘 곳에 1초 뒤 유성 3발 낙하 (천벌보다 약함)', p: 80000000, w: 21, gold: 1 },
       { id: 'leg', ic: '👑', n: '천벌 (레전드)', d: '3발 · 맞춘 곳에 궤도 포격 · 십자 5연속 대폭발', p: 300000000, w: 20, gold: 1 },
       { id: 'ab', ic: '☢️', gs: 1, get n() { return ABN + (own.ab ? ' ×' + own.ab : ''); }, get d() { const g = GS.stock.ab; return '전 서버·모든 방 공용 한정 재고 · 선착순 (' + (!GS.ok ? '재고 확인 중…' : g && g.stock > 0 ? '남은 ' + g.stock + '개' : '품절 · 관리자가 재고를 넣으면 구매 가능') + ') · N키로 설치 → 같은 방 모두에게 박수 연출! PvP 켠 사람·안 켠 사람 모두 돈 10%를 뺏기고 블랙홀에 30초간 끌려가요 (무적 포션 중이면 피해 없음)'; }, get p() { const g = GS.stock.ab; return g ? g.price : 100000000; } },
@@ -4298,7 +4313,7 @@
     let enGate = 0;
     function fxShot(i) {   // 발사할 때마다 한 번 호출 → 이번 발사에 적용되는 인첸트 효과
       const r = { free: false, crit: false, split: 0, pr: 0, thru: 0, chain: 0, cdm: 1, stl: 1, hit: null };
-      const seenL = {}; lgSNow = lgCharged ? lgS() : { n: 0 }; const fusing = lgSNow.n === 4;   // 짧게 클릭한 일반 발사에는 레전드/합일 효과가 없어요   // 발사 시작 시점의 겹침 상태를 먼저 읽어요 (합일 중엔 개별 타이틀 억제)
+      const seenL = {}; lgSNow = lgCharged ? lgS() : { n: 0 }; const lg = { ids: [], v: {}, fuse: false, used: false, S: lgSNow };   // v23: 레전드/합일 효과는 총알이 닿은(맞은) 곳에서 터져요   // 짧게 클릭한 일반 발사에는 레전드/합일 효과가 없어요   // 발사 시작 시점의 겹침 상태를 먼저 읽어요 (합일 중엔 개별 타이틀 억제)
       for (const e of enAll(i)) {
         const id = e.d.id, v = e.v;
         if (e.d.leg) { if (!lgCharged || seenL[id]) continue; seenL[id] = 1; }   // 같은 레전드를 여러 개 박아도 한 번만 적용
@@ -4309,13 +4324,14 @@
         else if (id === 'storm') r.chain = r.chain || (Math.random() < v ? 1 : 0);
         else if (id === 'haste') r.cdm *= v;
         else if (id === 'ghost') r.stl *= v;
-        else if (id === 'l_time') { r.cdm *= 0.4; r.crit = true; r.free = true; timeTick(); timeWarp(); }
-        else if (id === 'l_thunder') { const q = lgAim(); thunderStrike(q[0], q[1]); }
-        else if (id === 'l_midas') { money += v; lgN = (lgN + 1) % 10; if (lgN === 0) { money += 50000; midasFx(P.x, P.y, 9 + (P.z || 0), true); } else { midasFx(P.x, P.y, 9 + (P.z || 0), false); lgPop(P.x, P.y, 20 + (P.z || 0), '+$' + v.toLocaleString(), '#ffd23f'); } playSound('cash'); }
-        else if (id === 'l_void') { if (!fusing) { const q = lgAim(); voidAdd(q[0], q[1]); } }   // 합일 발사엔 합일 쪽 균열 1개만
+        else if (id === 'l_time') { r.cdm *= 0.4; r.crit = true; r.free = true; timeTick(); lg.ids.push(id); }
+        else if (id === 'l_thunder') { lg.ids.push(id); }
+        else if (id === 'l_midas') { lg.ids.push(id); lg.v.l_midas = v; }
+        else if (id === 'l_void') { lg.ids.push(id); }
         else if (e.d.t === 'hit') (r.hit = r.hit || []).push({ id, v, lv: e.lv });
       }
-      if (enAll(i).filter(e => e.d.leg).map(e => e.d.id).filter((v, n, a) => a.indexOf(v) === n).length === 4 && lgCharged) { const q = lgAim(); lgConverge(q[0], q[1]); }   // v23: 쏠 때마다 100%   // 🔗 레전드 합일
+      if (enAll(i).filter(e => e.d.leg).map(e => e.d.id).filter((v, n, a) => a.indexOf(v) === n).length === 4 && lgCharged) lg.fuse = true;   // 🔗 레전드 합일 (쏠 때마다 100%)
+      if (lg.ids.length) r.lgd = lg;
       return r;
     }
     function enHit(b, k, t) {   // 총알이 무언가에 맞았을 때 (k: c 차 · p 시민 · o 경찰관)
