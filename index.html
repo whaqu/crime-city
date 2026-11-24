@@ -533,9 +533,9 @@
   const pp = p => p.beach ? [p.x, p.y] : [p.h ? p.t : p.k * B + p.off, p.h ? p.k * B + p.off : p.t];
 
   // v23: 헬리오스(레전드 저격총) — 모든 것을 관통하는 황금 광선, 끝(벽/최대 사거리)에서 낙뢰 폭발
-  function legSnipe(E) {
-    E = E || {};
-    const a = MP.aimA(), dx = Math.cos(a), dy = Math.sin(a), sl = MP.aimSl(P.z + 9), dm = 420 * dmgMul(MP.wlv(22)) * (E.crit ? 2.5 : 1); let z = P.z + 9;
+  function legSnipe(E, da, sub) {
+    E = E || {}; da = da || 0;
+    const a = MP.aimA() + da, dx = Math.cos(a), dy = Math.sin(a), sl = MP.aimSl(P.z + 9), dm = 420 * dmgMul(MP.wlv(22)) * (E.crit ? 2.5 : 1) * (sub ? 0.6 : 1); let z = P.z + 9;
     const sx = P.x + dx * 12, sy = P.y + dy * 12, sz0 = z; let x = sx, y = sy, L = 2600, hitN = 0, pv = false; const done = new Set(), hits = [];
     for (let s2 = 0; s2 < 430; s2++) {
       x += dx * 6; y += dy * 6; z += sl * 6;
@@ -549,36 +549,42 @@
     lgSegs(lgPath([sx, sy, sz0], [ex, ey, ez], 1, 0), 0xffd23f, 3.2, 0.6);
     for (const h of hits.slice(0, 10)) { lgRing(h[0], h[1], 0xffe27a, 8, 90, 0.5); lgSpark(h[0], h[1], 14, 0xfff2a0, 8); }
     for (const h of hits.slice(0, 6)) lgSkyBolt(h[0], h[1], 0xffe27a);
+    if (sub) { lgDelay(0.3, () => { lgRing(ex, ey, 0xffe27a, 8, 120, 0.5); boom(ex, ey, 80, 150); }); return; }
     shake = Math.max(shake, 12); lgFlash('radial-gradient(circle,rgba(255,230,140,.35),rgba(255,200,60,0) 70%)', 0.7, 400);
     lgBanner('🎯 헬리오스', '#ffd23f', hits.length ? '관통 ' + hits.length + '명' : '황금 광선');
     lgDelay(0.3, () => { if (E.lgd) lgRunAt(E.lgd, ex, ey); lgSkyBolt(ex, ey, 0xffe27a); lgColumn(ex, ey, 0xffd23f, 24, 620, 0.7, 0.8); lgRing(ex, ey, 0xffe27a, 10, 180, 0.7); boom(ex, ey, 120, 260); });
   }
   function snipe(E, idx) {
-    if (idx === 22) { legSnipe(E); return; }
     E = E || {};
-    const a = MP.aimA(), dx = Math.cos(a), dy = Math.sin(a), sl = MP.aimSl(P.z + 9), dm = 140 * dmgMul(MP.wlv(5)) * (E.crit ? 2.5 : 1); let z = P.z + 9;
-    let x = P.x + dx * 10, y = P.y + dy * 10, L = 1800;
+    const n = Math.min(E.split || 0, 6);
+    if (idx === 22) { legSnipe(E); for (let s2 = 0; s2 < n; s2++) legSnipe(E, (s2 % 2 ? 1 : -1) * 0.07 * (1 + (s2 >> 1)), 1); return; }
+    // v23: 저격총도 분열(옆으로 퍼지는 보조 탄) · 관통(여러 명 꿰뚫기) · 뇌전(번개 연쇄)이 먹혀요
+    for (let r = 0; r <= n; r++) snipeRay(E, r === 0 ? 0 : (r % 2 ? 1 : -1) * 0.07 * (1 + ((r - 1) >> 1)), r > 0);
+  }
+  function snipeRay(E, da, sub) {
+    const a = MP.aimA() + da, dx = Math.cos(a), dy = Math.sin(a), sl = MP.aimSl(P.z + 9), dm = 140 * dmgMul(MP.wlv(5)) * (E.crit ? 2.5 : 1) * (sub ? 0.6 : 1); let z = P.z + 9;
+    let x = P.x + dx * 10, y = P.y + dy * 10, L = 1800, pr = E.thru ? 99 : (E.pr || 0); const done = new Set();
     for (let s = 0; s < 300; s++) {
       x += dx * 6; y += dy * 6; z += sl * 6;
       if (!inW(x, y) || z < bh(x, y)) { L = s * 6; break; }
       let hit = false;
       for (const c of [...cars]) {
-        if (c !== P.car && Math.hypot(c.x - x, c.y - y) < 30 && Math.abs((c.z || 0) + 8 - z) < 60) {
-          dmgCar(c, dm); if (E.hit) MP.enHit({ en: E.hit, x, y, z }, 'c', c); hit = true; break;
+        if (c !== P.car && !done.has(c) && Math.hypot(c.x - x, c.y - y) < 30 && Math.abs((c.z || 0) + 8 - z) < 60) {
+          done.add(c); dmgCar(c, dm); if (E.hit) MP.enHit({ en: E.hit, x, y, z }, 'c', c); if (E.chain) arcChain({}, c); hit = true; break;
         }
       }
       if (!hit) for (const p of peds) {
-        if (p.dead > 0) continue;
-        const q = pp(p); if (Math.hypot(q[0] - x, q[1] - y) < 16) { hitPed(p, true); if (E.hit) MP.enHit({ en: E.hit, x, y, z }, 'p', p); hit = true; break; }
+        if (p.dead > 0 || done.has(p)) continue;
+        const q = pp(p); if (Math.hypot(q[0] - x, q[1] - y) < 16) { done.add(p); hitPed(p, true); if (E.hit) MP.enHit({ en: E.hit, x, y, z }, 'p', p); if (E.chain) arcChain({}, p); hit = true; break; }
       }
       if (!hit) for (let j = offs.length - 1; j >= 0; j--) {
-        const o = offs[j]; if (o.dead <= 0 && Math.hypot(o.x - x, o.y - y) < 16) { o.hp -= dm; if (o.hp <= 0) killOff(j); else if (E.hit) MP.enHit({ en: E.hit, x, y, z }, 'o', o); hit = true; break; }
+        const o = offs[j]; if (o.dead <= 0 && !done.has(o) && Math.hypot(o.x - x, o.y - y) < 16) { done.add(o); o.hp -= dm; if (o.hp <= 0) killOff(j); else if (E.hit) MP.enHit({ en: E.hit, x, y, z }, 'o', o); if (E.chain) arcChain({}, o); hit = true; break; }
       }
-      if (!hit && MP.pvpRay(x, y, z, dm, E.hit)) hit = true;
-      if (hit) { L = s * 6; break; }
+      if (!hit && !done.has('v') && MP.pvpRay(x, y, z, dm, E.hit)) { done.add('v'); hit = true; }
+      if (hit) { if (pr > 0) { pr--; continue; } L = s * 6; break; }
     }
-    if (E.lgd) lgRunAt(E.lgd, P.x + dx * (10 + L), P.y + dy * (10 + L));   // 저격총: 맞은 곳(끝)에서 레전드 효과
-    const m = bx(L, 0.5, 0.5, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true }));
+    if (E.lgd && !sub) lgRunAt(E.lgd, P.x + dx * (10 + L), P.y + dy * (10 + L));   // 저격총: 맞은 곳(끝)에서 레전드 효과
+    const m = bx(L, 0.5, 0.5, new THREE.MeshBasicMaterial({ color: sub ? 0xffe27a : 0xffffff, transparent: true }));
     m.position.set(P.x + dx * (10 + L / 2), z, P.y + dy * (10 + L / 2)); m.rotation.y = -a; sc.add(m);
     trc.push({ m, t: 0.15 });
   }
@@ -3064,6 +3070,11 @@
       #hotbar .sl.gold{background:linear-gradient(115deg,#7a5200,#ffd23f 28%,#fff6c2 50%,#ffd23f 72%,#7a5200);background-size:220% 100%;animation:goldsh 2s linear infinite;border-color:#ffe27a;box-shadow:0 0 14px rgba(255,210,63,.75),0 0 28px rgba(255,190,0,.4)}
       #hotbar .sl.gold .n,#hotbar .sl.gold .k{color:#2a1d00}#hotbar .sl.gold .a{color:#5a3b00}#hotbar .sl.gold svg{fill:#3a2600!important}
       @keyframes goldsh{0%{background-position:0 0}100%{background-position:220% 0}}
+      #shop .sec{grid-column:1/-1;margin:8px 0 0;font:800 13px system-ui;color:#ffd23f;border-bottom:1px solid rgba(255,210,63,.3);padding-bottom:4px}
+      #shop .it.gold{padding:6px 9px;gap:7px;box-shadow:0 0 8px rgba(255,210,63,.45);animation:none;background:linear-gradient(115deg,#7a5200,#ffd23f 45%,#fff0a8 55%,#c8921a)}
+      #shop .it.gold .ic{font-size:20px;width:26px} #shop .it.gold .nm{font-size:13px} #shop .it.gold .pr{font-size:12.5px}
+      #shop .it.gold .ds{font-size:10.5px;margin-top:1px;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+      #shop .it.gold:hover .ds{-webkit-line-clamp:4}
       #hotbar .k{position:absolute;left:5px;top:3px;font:700 11px system-ui;color:rgba(255,255,255,.7)}
       #hotbar .n{position:absolute;left:0;right:0;bottom:3px;text-align:center;font:600 9.5px system-ui;color:rgba(255,255,255,.85);white-space:nowrap}
       #hotbar .a{position:absolute;right:5px;top:3px;font:700 10.5px system-ui;color:#ffd23f}
@@ -3940,11 +3951,12 @@
     for (const ev of ['mousedown', 'mouseup', 'click', 'touchstart']) shopEl.addEventListener(ev, e => { e.stopPropagation(); if (e.target === shopEl && ev === 'click') toggleShop(false); });
     function renderShop() {
       $('shopMoney').textContent = '💰 $' + Math.round(money).toLocaleString();
-      $('shopGr').innerHTML = ITEMS.map(it => {
+      const card = it => {
         const gsd = it.gs ? GS.stock[it.id] : null, so = !!it.gs && (!gsd || gsd.stock <= 0);
         const ow = (it.perm && own[it.perm]) || (it.mx && it.mx()), no = !ow && (so || money < it.p), hv = it.w && own[it.w] ? invCount(it.w) + 1 : 0, pn = POT[it.id] ? potN(it.id) : 0;
         return `<div class="it${ow ? ' own' : no ? ' no' : ''}${it.gold ? ' gold' : ''}" data-id="${it.id}"><div class="ic">${it.ic}</div><div><div class="nm">${it.n}${hv ? ` <small style="color:#3f6">보유 ×${hv}</small>` : ''}${POT[it.id] ? ` <small style="color:#7fe7ff">보유 ${pn}병</small>` : ''}</div><div class="ds">${it.d}${hv ? '<br><b style="color:#3f6">✔ 또 사면 인벤토리(I)에 보관돼요</b>' : ''}${it.w && WP[it.w].tip ? "<br><b style=\"color:#ffb347\">✦ " + WP[it.w].tip + "</b>" : ""}</div></div><div class="pr">${ow ? (it.mx ? 'MAX' : it.tg ? it.tg() : '보유 중') : so ? '품절' : (it.gs ? '남은 ' + gsd.stock + '개<br>' : '') + '$' + it.p.toLocaleString()}</div></div>`;
-      }).join('');
+      };
+      $('shopGr').innerHTML = ITEMS.filter(it => !it.gold).map(card).join('') + '<div class="sec">👑 레전드 무기 (마우스를 올리면 설명)</div>' + ITEMS.filter(it => it.gold).map(card).join('');
     }
     shopEl.addEventListener('click', e => { const t = e.target.closest('.it'); if (t) buy(t.dataset.id); });
     function toggleShop(v) {
