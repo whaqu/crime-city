@@ -1763,7 +1763,7 @@
     { k: ['l_midas', 'l_time'], ic: '⏳', n: '시간 금화', d: '시간 정지가 걸릴 때 멈춘 적 한 명당 +$2,000' },
     { k: ['l_void', 'l_time'], ic: '🕳️', n: '시간의 구멍', d: '시간 정지 중에는 균열의 범위 +35% · 흡입력 2.2배' }
   ];
-  const LG_ALL = { k: ['l_thunder', 'l_midas', 'l_void', 'l_time'], ic: '👑', n: '레전드 합일', d: '4개를 전부 겹치면 4번째 발사마다 합일 폭격: 4색 충격파 · 금빛 번개 3줄기 · 시계 · 금화 비 · 대폭발 + 균열 + 시간 정지 + $20,000' };
+  const LG_ALL = { k: ['l_thunder', 'l_midas', 'l_void', 'l_time'], ic: '👑', n: '레전드 합일', d: '4개를 전부 겹치면 쏠 때마다 100% 합일 폭격(타이틀 “시공 붕괴”): 4색 충격파 · 금빛 번개 3줄기 · 시계 · 금화 비 · 대폭발 + 균열 + 시간 정지 + $20,000' };
   function lgS() { let S = {}; try { S = MP.lgSet(); } catch (e) {} S.n = (S.l_thunder ? 1 : 0) + (S.l_midas ? 1 : 0) + (S.l_void ? 1 : 0) + (S.l_time ? 1 : 0); return S; }
   function lgSynNames(S) { const a = LG_SYN.filter(y => y.k.every(id => S[id])).map(y => y.ic + y.n); if (LG_ALL.k.every(id => S[id])) a.push(LG_ALL.ic + LG_ALL.n); return a; }
   function lgTargets(x, y, R) {
@@ -1789,7 +1789,7 @@
   // 🔗 레전드 합일: 4개를 전부 겹친 무기의 4번째 발사마다 → ① 타이틀 + 충전(4색이 한 점으로 모임) ② 0.45초 뒤 합쳐진 공격
   const LG_FU = ['천지개벽', '시공 붕괴', '종말의 심판', '신화 강림'];
   function lgConverge(x, y) {
-    const nm = LG_FU[lgFuI++ % LG_FU.length], cols = [0x8fd8ff, 0xffd23f, 0xc27bff, 0x7fe0ff];
+    const nm = '시공 붕괴', cols = [0x8fd8ff, 0xffd23f, 0xc27bff, 0x7fe0ff];
     lgFuBanner('👑 ' + nm, '⚡ 뇌신 · 💰 미다스 · 🌌 공허 · ⏳ 시간 지배 — 레전드 합일');
     lgFlash('rgba(8,4,28,1)', 0.5, 450, true); playSound('warp'); shake = Math.max(shake, 6);
     cols.forEach((c, i) => { lgRing(x, y, c, 250 - i * 20, 24, 0.45, 3 + i * 1.4, 0.85); for (let n = 0; n < 8; n++) lgP(0, 0, rnd(8, 70), 0, 0, rnd(-20, 60), { col: c, life: 0.45, sz: rnd(1.8, 3.2), orb: { cx: x, cy: y, ang: rnd(0, 6.283), rad: rnd(120, 190), av: 7, rv: -300 } }); });
@@ -4212,7 +4212,7 @@
     let enGate = 0;
     function fxShot(i) {   // 발사할 때마다 한 번 호출 → 이번 발사에 적용되는 인첸트 효과
       const r = { free: false, crit: false, split: 0, pr: 0, thru: 0, chain: 0, cdm: 1, stl: 1, hit: null };
-      const seenL = {}; lgSNow = lgS(); const fusing = lgSNow.n === 4 && (lgCv + 1) % 4 === 0;   // 발사 시작 시점의 겹침 상태를 먼저 읽어요 (합일 중엔 개별 타이틀 억제)
+      const seenL = {}; lgSNow = lgS(); const fusing = lgSNow.n === 4;   // 발사 시작 시점의 겹침 상태를 먼저 읽어요 (합일 중엔 개별 타이틀 억제)
       for (const e of enAll(i)) {
         const id = e.d.id, v = e.v;
         if (e.d.leg) { if (seenL[id]) continue; seenL[id] = 1; }   // 같은 레전드를 여러 개 박아도 한 번만 적용
@@ -4229,7 +4229,7 @@
         else if (id === 'l_void') { if (!fusing) { const q = lgAim(); voidAdd(q[0], q[1]); } }   // 합일 발사엔 합일 쪽 균열 1개만
         else if (e.d.t === 'hit') (r.hit = r.hit || []).push({ id, v, lv: e.lv });
       }
-      if (enAll(i).filter(e => e.d.leg).map(e => e.d.id).filter((v, n, a) => a.indexOf(v) === n).length === 4) { lgCv++; if (lgCv % 4 === 0) { const q = lgAim(); lgConverge(q[0], q[1]); } }   // 🔗 레전드 합일
+      if (enAll(i).filter(e => e.d.leg).map(e => e.d.id).filter((v, n, a) => a.indexOf(v) === n).length === 4) { const q = lgAim(); lgConverge(q[0], q[1]); }   // v23: 쏠 때마다 100%   // 🔗 레전드 합일
       return r;
     }
     function enHit(b, k, t) {   // 총알이 무언가에 맞았을 때 (k: c 차 · p 시민 · o 경찰관)
