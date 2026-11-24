@@ -2349,6 +2349,7 @@
     let best = null, bd = 2200; for (const o of cars) if (o.type === 'c' && o.pat) { const d = Math.hypot(o.x - tg.x, o.y - tg.y); if (d < bd) { bd = d; best = o; } }
     if (best) callIn(best, tg, stars);
   }
+  let raidSq = null;   // v23: 레이드 경찰 부대(같은 도로에 줄지어 출동)
   function spawnPolice(hw, tk) {
     const tg = P.onFoot ? P : P.car;
     const stars = Math.min(5, Math.ceil(heat - 1e-6));
@@ -2356,8 +2357,14 @@
     let tankN = 0; for (const c of cars) if (c.type === 'c' && !c.pat && c.kind === 'tank') tankN++;
     const needHeli = heliN < (hw || 0), needTank = !needHeli && tankN < (tk || 0), spd = MP.raidSpeed();
     for (let n = 0; n < 40; n++) {
-      const k = Math.floor(rnd(1, N)), t = rnd(B, W - B), h = Math.random() < 0.5, x = h ? t : k * B, y = h ? k * B : t, d = Math.hypot(x - tg.x, y - tg.y), lo = n < 25 ? 900 : 600, hi = n < 25 ? 1400 : 1000;
-      if (d > lo && d < hi) {
+      const k = Math.floor(rnd(1, N)), t = rnd(B, W - B), h = Math.random() < 0.5, lo = n < 25 ? 900 : 600, hi = n < 25 ? 1400 : 1000;
+      let x = h ? t : k * B, y = h ? k * B : t, d = Math.hypot(x - tg.x, y - tg.y), sqUse = false;
+      if (n === 0 && MP.raid() && raidSq && raidSq.left > 0 && T - raidSq.t < 8) {   // 같은 부대: 앞 차 바로 뒤에 줄지어 합류
+        const q = raidSq; if (q.h) { x = Math.max(B, Math.min(W - B, q.x + q.sg * q.k * 46)); y = q.y; } else { y = Math.max(B, Math.min(W - B, q.y + q.sg * q.k * 46)); x = q.x; }
+        d = Math.hypot(x - tg.x, y - tg.y); sqUse = true;
+      }
+      if (sqUse || (d > lo && d < hi)) {
+        if (MP.raid()) { if (sqUse) { raidSq.k++; raidSq.left--; } else raidSq = { x, y, h, sg: Math.sign(h ? x - tg.x : y - tg.y) || 1, k: 1, left: 3, t: T }; }
         const ang = Math.atan2(tg.y - y, tg.x - x), mil = stars >= 4 && !MP.raid();
         if (needHeli) {
           const m = stars >= 4 || MP.raid();
