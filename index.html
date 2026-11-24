@@ -5056,7 +5056,7 @@
       #lobBox .sz{display:flex;gap:6px}#lobBox .sz .o{flex:1;text-align:center;margin:0}#lobBox .inf{margin-top:10px;font-weight:800;text-align:center;min-height:36px}`; document.head.appendChild(st); }
     document.body.appendChild(lobBox);
     for (const ev of ['mousedown', 'mouseup', 'click', 'touchstart']) lobBox.addEventListener(ev, e => e.stopPropagation());
-    const lobMine = { diff: 0, size: 1, ev: 0 }; let lobCfg = null, lobLead = false, lobGo = null, lobSendT = 0, lobSig = '', lobWas = false;
+    const lobMine = { diff: 0, size: 1, ev: 0 }; let lobCfg = null, lobLead = false, lobGo = null, lobSendT = 0, lobSig = '', lobWas = false, lobHold = 0;   // lobHold: 이 시각 전엔 출발 카운트다운을 시작하지 않아요(설정 고를 시간)
     // v23: 난이도 선택이 가끔 안 되던 문제 — 패널이 주기적으로 다시 그려지면서 '누르는 사이' 버튼이 바뀌면 click이 취소됐어요 → 누르는 순간(mousedown/touchstart)에 바로 선택하고, 누르는 동안엔 다시 그리지 않아요
     let lobPress = 0;
     lobBox.addEventListener('mouseup', () => { lobPress = 0; }); window.addEventListener('mouseup', () => { lobPress = 0; }); window.addEventListener('touchend', () => { lobPress = 0; });
@@ -5067,6 +5067,7 @@
       if (t.dataset.d !== undefined) { lobMine.diff = +t.dataset.d; lobMine.ev = 0; } if (t.dataset.s !== undefined) lobMine.size = +t.dataset.s;
       if (t.dataset.e !== undefined) { const ev = evById(+t.dataset.e); if (ev && evState(ev) === 'open') lobMine.ev = ev.id; }
       lobCfg = { id: myId, name: myName, diff: lobMine.diff, size: lobMine.size, ev: lobMine.ev, t: performance.now() }; lobSendT = 0; lobSig = '';
+      lobHold = performance.now() + 3000; if (lobGo) { lobGo = null; send('lob', { k: 'abort' }); }   // v23: 설정을 바꾸면 이미 시작된 카운트다운을 취소하고 새 설정으로 다시 세요 (솔로가 지옥을 골라도 보통으로 시작되던 문제)
     };
     lobBox.addEventListener('mousedown', lobPick); lobBox.addEventListener('touchstart', lobPick, { passive: true }); lobBox.addEventListener('click', lobPick);
     function lobOn() {
@@ -5091,22 +5092,22 @@
         if (lobLead && lobGo) send('lob', { k: 'abort' });
         lobLead = false; lobGo = null; lobWas = false; if (lobBox.style.display !== 'none') lobBox.style.display = 'none'; return;
       }
-      if (!lobWas) { lobWas = true; lobSig = ''; if (document.pointerLockElement) document.exitPointerLock(); }
+      if (!lobWas) { lobWas = true; lobSig = ''; lobHold = now + 5000; if (document.pointerLockElement) document.exitPointerLock(); }
       if (Date.now() - raidInfoT > 20000) raidFetch();
       if (!lobCfg || now - lobCfg.t > 4000 || !on.some(p => p.id === lobCfg.id)) { lobCfg = { id: myId, name: myName, diff: lobMine.diff, size: lobMine.size, ev: lobMine.ev, t: now }; lobLead = true; lobSendT = 0; }
       if (lobLead) { lobCfg.t = now; if (now - lobSendT > 1500) { lobSendT = now; send('lob', { k: 'cfg', diff: lobCfg.diff, size: lobCfg.size, ev: lobCfg.ev | 0 }); } }
       const full = on.length === lobCfg.size;
       if (lobLead) {
         const evO = lobCfg.ev ? evById(lobCfg.ev) : null, evOk = !lobCfg.ev || (evO && evState(evO) === 'open');
-        if (full && evOk && !lobGo) { const code = 'RI' + rc(4); lobGo = { code, diff: lobCfg.diff, size: lobCfg.size, ev: lobCfg.ev | 0, at: now + 3000 }; send('lob', { k: 'go', code, diff: lobCfg.diff, size: lobCfg.size, ev: lobCfg.ev | 0 }); }
+        if (full && evOk && !lobGo && now >= lobHold) { const code = 'RI' + rc(4); lobGo = { code, diff: lobCfg.diff, size: lobCfg.size, ev: lobCfg.ev | 0, at: now + 3000 }; send('lob', { k: 'go', code, diff: lobCfg.diff, size: lobCfg.size, ev: lobCfg.ev | 0 }); }
         else if (!full && lobGo) { lobGo = null; send('lob', { k: 'abort' }); }
       }
       if (lobGo) {
         if (on.length !== lobGo.size) lobGo = null;
         else if (now >= lobGo.at) { const g = lobGo; lobGo = null; lobBox.style.display = 'none'; lobWas = false; pendRaid = { code: g.code, diff: g.diff, size: g.size, ev: g.ev ? evById(g.ev) : null }; go(g.code); return; }
       }
-      const cd = lobGo ? Math.max(1, Math.ceil((lobGo.at - now) / 1000)) : 0;
-      const sig = [lobCfg.id, lobCfg.diff, lobCfg.size, lobCfg.ev | 0, on.length, cd, lobLead, raidInfoV, Math.floor(Date.now() / 4000)].join('|');
+      const cd = lobGo ? Math.max(1, Math.ceil((lobGo.at - now) / 1000)) : 0, hd = !lobGo && lobLead && on.length === lobCfg.size && now < lobHold ? Math.ceil((lobHold - now) / 1000) : 0;
+      const sig = [lobCfg.id, lobCfg.diff, lobCfg.size, lobCfg.ev | 0, on.length, cd, hd, lobLead, raidInfoV, Math.floor(Date.now() / 4000)].join('|');
       if (sig !== lobSig && !lobPress) {
         lobSig = sig; lobBox.className = lobLead ? '' : 'mem';
         lobBox.innerHTML = `<b class="t">🚔 경찰 레이드</b><div style="color:#9fb3c8">${lobLead ? '내가 방장 · 난이도와 인원을 정하세요' : '방장 ' + esc(lobCfg.name) + ' 님이 정한 설정이에요'}</div><div class="sec">난이도</div>`
@@ -5116,7 +5117,7 @@
             return `<div class="o${lobCfg.ev === ev.id ? ' on' : ''}" ${st === 'open' ? `data-e="${ev.id}"` : 'style="opacity:.55;cursor:default"'}>🎉 <b>${esc(ev.name)}</b><br><small style="color:#ffd23f">${lab}</small><br><small style="color:#9fb3c8">경찰 ${ev.pol}명 · 차 ${ev.cars}+헬기 ${ev.heli}${ev.tank ? '+탱크 ' + ev.tank : ''} · 속도 ×${ev.speed} · 훔치기 ${ev.steal}번<br>🎁 ${esc(fmtRew(ev.reward))}</small></div>`;
           }).join('') : '')
           + `<div class="sec">입장 인원 (정확히 이 인원이 발판 위에 서야 시작)</div><div class="sz">${[1, 2, 3, 4].map(n => `<div class="o${lobCfg.size === n ? ' on' : ''}" data-s="${n}">${n}명</div>`).join('')}</div>`
-          + `<div class="inf" style="color:${cd ? '#ffd23f' : on.length === lobCfg.size ? '#4cd98a' : '#9fb3c8'}">${cd ? `⏱ ${cd}초 뒤 출발!` : `발판 위 ${on.length} / ${lobCfg.size}명` + (on.length > lobCfg.size ? '<br>인원 초과 · 한 명이 내려가요' : '')}</div>`;
+          + `<div class="inf" style="color:${cd ? '#ffd23f' : on.length === lobCfg.size ? '#4cd98a' : '#9fb3c8'}">${cd ? `⏱ ${cd}초 뒤 출발!` : hd ? `🕐 난이도를 고르세요 · ${hd}초 뒤 출발 준비` : `발판 위 ${on.length} / ${lobCfg.size}명` + (on.length > lobCfg.size ? '<br>인원 초과 · 한 명이 내려가요' : '')}</div>`;
         lobBox.style.display = 'block';
       }
     }
