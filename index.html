@@ -2476,7 +2476,7 @@
     if (P.car && P.car.inv) P.car.hp = P.car.mhp;
     if (isSn(wi) && P.onFoot && aim !== aimP) scope = !!aim; aimP = aim;
     if (heat <= 3) martial = false;
-    T += dt; hc -= dt; tt -= dt; ap = Math.max(-1, Math.min(1, ap + ((keys.arrowup ? 1 : 0) - (keys.arrowdown ? 1 : 0)) * 1.1 * dt));
+    T += dt; hc -= dt; tt -= dt; ap = Math.max(-1.4, Math.min(1, ap + ((keys.arrowup ? 1 : 0) - (keys.arrowdown ? 1 : 0)) * 1.1 * dt));
     if (!P.onFoot) {
       const al = (keys.arrowright ? 1 : 0) - (keys.arrowleft ? 1 : 0);
       ay = Math.max(-3.2, Math.min(3.2, ay + al * 2.2 * dt)); if (!al && !MP.locked()) ay *= Math.max(0, 1 - 1.5 * dt); if (!MP.locked()) ap *= Math.max(0, 1 - 0.8 * dt);
@@ -3199,7 +3199,7 @@
       const dx = e.movementX || 0, dy = e.movementY || 0;
       if (P.onFoot) { if (!(tased > 0) && !P.climb) P.a += dx * 0.0032 * (scope ? 0.35 : 1); }
       else ay = Math.max(-3.2, Math.min(3.2, ay + dx * 0.004));
-      ap = Math.max(-1, Math.min(1, ap - dy * 0.0028 * (scope ? 0.35 : 1)));
+      ap = Math.max(-1.4, Math.min(1, ap - dy * 0.0028 * (scope ? 0.35 : 1)));
     });
 
     // ---------------------------------------------------------------- 상호작용
@@ -3565,7 +3565,7 @@
       return aimH;
     }
     function aimA() { const H = aimPt(); if (!H || Math.hypot(H.x - P.x, H.y - P.y) < 14) return P.a; return Math.atan2(H.y - P.y, H.x - P.x); }
-    function aimSl(z0) { const H = aimPt(); if (!H) return Math.tan(ap); const hd = Math.hypot(H.x - P.x, H.y - P.y); if (hd < 14) return Math.tan(ap); return Math.max(-2, Math.min(2, (H.h - z0) / hd)); }
+    function aimSl(z0) { const H = aimPt(); if (!H) return Math.max(-4, Math.tan(ap)); const hd = Math.hypot(H.x - P.x, H.y - P.y); if (hd < 14) return Math.max(-4, Math.tan(ap)); return Math.max(-2, Math.min(2, (H.h - z0) / hd)); }
 
     function toggleMap(v) {
       mapOpen = v === undefined ? !mapOpen : v;
