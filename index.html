@@ -4443,12 +4443,13 @@
             + `<div class="ds" style="flex-basis:100%;margin:0">${e.ic} ${e.n} ${[1, 2, 3].map(l => `<b${(cur && cur[0] === sel && cur[1] === l) ? ' style="color:#ffd23f"' : ''}>Lv${l}</b>: ${e.d(e.v[l - 1])}`).join(' · ')}</div></div>`;
         }
         { const L0 = tEn(enT), base = L0[0], have = L0.map(x => x[0]);
-          const lgl = ENCH.map((e, k) => [e, k]).filter(([e, k]) => e.leg && enchOk(w, e) && !have.includes(k));
+          const lgAll = ENCH.map((e, k) => [e, k]).filter(([e]) => e.leg && enchOk(w, e)), full4 = lgAll.length > 0 && lgAll.every(([, k]) => have.includes(k));   // v23: 레전드 합일(4종 완성) 후엔 같은 레전드도 중복 부착 가능
+          const lgl = full4 ? lgAll : lgAll.filter(([, k]) => !have.includes(k));
           if (base && !ENCH[base[0]].leg && base[1] >= 3) {
             if (!lgl.length || L0.length >= 10) h += '<div class="ds" style="margin-top:8px;text-align:center;color:#ffd23f">👑 붙일 수 있는 레전드가 더 없어요</div>';
             else {
               if (enLgK === null || !lgl.some(([, k]) => k === enLgK)) enLgK = lgl[0][1];
-              h += `<div class="row" style="flex-wrap:wrap;margin-top:8px;border:1px solid #ffd23f55"><div class="nm" style="min-width:150px;color:#ffd23f">👑 레전드 추가 부착<div class="ds">Lv3 인첸트가 있어서 해금! 하나를 골라 ${fmt(LG_ATT_COST)}을 내고 ${Math.round(LG_ATT_P * 100)}% 확률로 추가 부착 (실패해도 돈은 나가요)</div></div>`
+              h += `<div class="row" style="flex-wrap:wrap;margin-top:8px;border:1px solid #ffd23f55"><div class="nm" style="min-width:150px;color:#ffd23f">👑 레전드 추가 부착<div class="ds">Lv3 인첸트가 있어서 해금! 하나를 골라 ${fmt(LG_ATT_COST)}을 내고 ${Math.round(LG_ATT_P * 100)}% 확률로 추가 부착 (실패해도 돈은 나가요)${full4 ? ' · 👑 합일 완성! 같은 레전드도 중복 부착 가능' : ''}</div></div>`
                 + `<select class="es lgs">${lgl.map(([x, k]) => `<option value="${k}"${k === enLgK ? ' selected' : ''}>${x.ic} ${x.n}</option>`).join('')}</select>`
                 + `<div class="btn o${money < LG_ATT_COST ? ' dis' : ''}" data-lgatt="1">🎲 도전 ${fmt(LG_ATT_COST)}</div>`
                 + `<div class="ds" style="flex-basis:100%;margin:0">${ENCH[enLgK].ic} ${ENCH[enLgK].n}: ${ENCH[enLgK].d(ENCH[enLgK].v[0])}</div></div>`;
@@ -4490,7 +4491,7 @@
     }
     function lgAttach() {
       const t = enT; if (!t || !own.ench) return; const w = tW(t), L = tEn(t), base = L[0], k = enLgK;
-      if (!base || ENCH[base[0]].leg || base[1] < 3 || k === null || !ENCH[k] || !ENCH[k].leg || !enchOk(w, ENCH[k]) || L.some(x => x[0] === k) || L.length >= 10) return;
+      if (!base || ENCH[base[0]].leg || base[1] < 3 || k === null || !ENCH[k] || !ENCH[k].leg || !enchOk(w, ENCH[k]) || (L.some(x => x[0] === k) && ENCH.some((e, q) => e.leg && enchOk(w, e) && !L.some(x => x[0] === q))) || L.length >= 10) return;
       if (money < LG_ATT_COST) { enNote(`돈이 부족해요 (${fmt(LG_ATT_COST - money)} 더 필요)`, 0); playSound('shoot'); return; }
       money -= LG_ATT_COST; const le = ENCH[k];
       if (Math.random() < LG_ATT_P) {
