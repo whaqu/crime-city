@@ -4399,7 +4399,7 @@
     }
 
     // ---------------------------------------------------------------- 무기 강화소 (강화 최대 +99 · 인첸트 탭은 이용권($50,000)을 사야 열림)
-    let enTab = 'enh', enT = null, enPick = false, enSelK = null, enLgK = null, enUseTk = false;
+    let enTab = 'enh', enT = null, enPick = false, enSelK = null, enLgK = null, enExK = null, enUseTk = false;
     const LG_ATT_COST = 100000, LG_ATT_P = 0.1;   // enT: { s: 'h', i } 핫바 무기 · { s: 'v', n } 인벤토리 무기
     const enNote = (t, ok) => { $('enRes').style.color = ok ? '#6f6' : '#f66'; $('enRes').textContent = t; };
     const tOk = t => t && (t.s === 'h' ? (WP[t.i] && !WP[t.i].off && (t.i < 6 || own[t.i])) : !!(Array.isArray(own.inv) && own.inv[t.n]));
@@ -4443,18 +4443,29 @@
             + `<div class="ds" style="flex-basis:100%;margin:0">${e.ic} ${e.n} ${[1, 2, 3].map(l => `<b${(cur && cur[0] === sel && cur[1] === l) ? ' style="color:#ffd23f"' : ''}>Lv${l}</b>: ${e.d(e.v[l - 1])}`).join(' · ')}</div></div>`;
         }
         { const L0 = tEn(enT), base = L0[0], have = L0.map(x => x[0]);
-          const lgAll = ENCH.map((e, k) => [e, k]).filter(([e]) => e.leg && enchOk(w, e)), full4 = lgAll.length > 0 && lgAll.every(([, k]) => have.includes(k));   // v23: 레전드 합일(4종 완성) 후엔 같은 레전드도 중복 부착 가능
-          const lgl = full4 ? lgAll : lgAll.filter(([, k]) => !have.includes(k));
+          const lgAll = ENCH.map((e, k) => [e, k]).filter(([e]) => e.leg && enchOk(w, e)), full4 = lgAll.length > 0 && lgAll.every(([, k]) => have.includes(k));   // v23: 레전드 합일(4종 완성) 후엔 일반 인첸트를 원하는 대로 더 붙일 수 있어요
+          const lgl = lgAll.filter(([, k]) => !have.includes(k));
           if (base && !ENCH[base[0]].leg && base[1] >= 3) {
             if (!lgl.length || L0.length >= 10) h += '<div class="ds" style="margin-top:8px;text-align:center;color:#ffd23f">👑 붙일 수 있는 레전드가 더 없어요</div>';
             else {
               if (enLgK === null || !lgl.some(([, k]) => k === enLgK)) enLgK = lgl[0][1];
-              h += `<div class="row" style="flex-wrap:wrap;margin-top:8px;border:1px solid #ffd23f55"><div class="nm" style="min-width:150px;color:#ffd23f">👑 레전드 추가 부착<div class="ds">Lv3 인첸트가 있어서 해금! 하나를 골라 ${fmt(LG_ATT_COST)}을 내고 ${Math.round(LG_ATT_P * 100)}% 확률로 추가 부착 (실패해도 돈은 나가요)${full4 ? ' · 👑 합일 완성! 같은 레전드도 중복 부착 가능' : ''}</div></div>`
+              h += `<div class="row" style="flex-wrap:wrap;margin-top:8px;border:1px solid #ffd23f55"><div class="nm" style="min-width:150px;color:#ffd23f">👑 레전드 추가 부착<div class="ds">Lv3 인첸트가 있어서 해금! 하나를 골라 ${fmt(LG_ATT_COST)}을 내고 ${Math.round(LG_ATT_P * 100)}% 확률로 추가 부착 (실패해도 돈은 나가요)</div></div>`
                 + `<select class="es lgs">${lgl.map(([x, k]) => `<option value="${k}"${k === enLgK ? ' selected' : ''}>${x.ic} ${x.n}</option>`).join('')}</select>`
                 + `<div class="btn o${money < LG_ATT_COST ? ' dis' : ''}" data-lgatt="1">🎲 도전 ${fmt(LG_ATT_COST)}</div>`
                 + `<div class="ds" style="flex-basis:100%;margin:0">${ENCH[enLgK].ic} ${ENCH[enLgK].n}: ${ENCH[enLgK].d(ENCH[enLgK].v[0])}</div></div>`;
             }
           } else if (base && !ENCH[base[0]].leg) h += `<div class="ds" style="margin-top:8px;text-align:center;color:#9fb3c8">🔒 인첸트를 Lv3까지 올리면 👑 레전드를 추가로 붙일 수 있어요 (${fmt(LG_ATT_COST)} · ${Math.round(LG_ATT_P * 100)}%)</div>`;
+          if (full4) {   // 👑 합일 완성 보너스: 일반 인첸트를 원하는 대로 더 붙이기 (확정 · 최대 10개)
+            const exl = ENCH.map((e, k) => [e, k]).filter(([e, k]) => !e.leg && enchOk(w, e) && !(base && base[0] === k));
+            if (exl.length) {
+              if (enExK === null || !exl.some(([, k]) => k === enExK)) enExK = exl[0][1];
+              const ex = L0.find((x, i) => i > 0 && x[0] === enExK), nl = ex ? ex[1] + 1 : 1, mxx = ex && ex[1] >= 3, f10 = !ex && L0.length >= 10, cost = ENCH_COST[Math.min(2, nl - 1)], e2 = ENCH[enExK];
+              h += `<div class="row" style="flex-wrap:wrap;margin-top:8px;border:1px solid #c9a6ff66"><div class="nm" style="min-width:150px;color:#c9a6ff">➕ 추가 인첸트 (합일 보너스)<div class="ds">원하는 인첸트를 확정으로 더 붙여요 · ${L0.length} / 10개</div></div>`
+                + `<select class="es exs">${exl.map(([x, k]) => `<option value="${k}"${k === enExK ? ' selected' : ''}>${x.ic} ${x.n}</option>`).join('')}</select>`
+                + `<div class="btn o${mxx || f10 || money < cost ? ' dis' : ''}" data-exatt="1">${mxx ? 'MAX' : f10 ? '가득 참' : (ex ? `Lv${nl} 강화 ${fmt(cost)}` : `부착 ${fmt(cost)}`)}</div>`
+                + `<div class="ds" style="flex-basis:100%;margin:0">${e2.ic} ${e2.n} ${[1, 2, 3].map(l => `<b${ex && ex[1] === l ? ' style="color:#ffd23f"' : ''}>Lv${l}</b>: ${e2.d(e2.v[l - 1])}`).join(' · ')}</div></div>`;
+            }
+          }
         }
         h += '<div class="ds" style="text-align:center;margin-top:6px">새 인첸트를 부여할 때마다 10% 확률로 👑 레전드 인첸트(뇌신·미다스·공허·시간 지배)가 대신 붙어요 · 다른 인첸트로 교체하면 기존 인첸트는 사라져요 · 인첸트는 경매에 팔 때 무기와 함께 가요</div>';
         h += '<div class="ds" style="margin:12px 0 4px;font-weight:800;color:#ffd23f;font-size:13px">👑 레전드 인첸트 도감</div>' + ENCH.filter(e => e.leg).map(e => `<div class="row"><div class="nm">${e.ic} ${e.n}<div class="ds">${e.d(e.v[0])}</div></div></div>`).join('')
@@ -4471,9 +4482,9 @@
       const t = e.target.closest('.btn'); if (!t) return;
       if (t.dataset.pickbtn) { enPick = !enPick; renderEnh(); return; }
       if (!enT || !tOk(enT)) return;
-      if (t.dataset.i !== undefined) enhance(); else if (t.dataset.en !== undefined) enchant(); else if (t.dataset.lgatt !== undefined) lgAttach();
+      if (t.dataset.i !== undefined) enhance(); else if (t.dataset.en !== undefined) enchant(); else if (t.dataset.lgatt !== undefined) lgAttach(); else if (t.dataset.exatt !== undefined) exAttach();
     });
-    enhEl.addEventListener('change', e => { const tk = e.target.closest('[data-tk]'); if (tk) { enUseTk = tk.checked; renderEnh(); return; } const s = e.target.closest('.es'); if (s) { if (s.classList.contains('lgs')) enLgK = +s.value; else enSelK = +s.value; renderEnh(); } });
+    enhEl.addEventListener('change', e => { const tk = e.target.closest('[data-tk]'); if (tk) { enUseTk = tk.checked; renderEnh(); return; } const s = e.target.closest('.es'); if (s) { if (s.classList.contains('lgs')) enLgK = +s.value; else if (s.classList.contains('exs')) enExK = +s.value; else enSelK = +s.value; renderEnh(); } });
     function enhance() {
       const t = enT, w = tW(t), lv = tLv(t); if (lv >= ENH_MAX) return;
       const cost = enhCost(lv); if (money < cost) { enNote(`돈이 부족해요 (${fmt(cost - money)} 더 필요)`, 0); playSound('shoot'); return; }
@@ -4489,9 +4500,19 @@
       }
       saveOwn(); renderEnh();
     }
+    function exAttach() {
+      const t = enT; if (!t || !own.ench) return; const w = tW(t), L = tEn(t), k = enExK, have = L.map(x => x[0]);
+      const lgAll = ENCH.map((e, q) => [e, q]).filter(([e]) => e.leg && enchOk(w, e));
+      if (!lgAll.length || !lgAll.every(([, q]) => have.includes(q))) return;   // 레전드 합일(4종)을 완성해야 해요
+      if (k === null || !ENCH[k] || ENCH[k].leg || !enchOk(w, ENCH[k]) || (L[0] && L[0][0] === k)) return;
+      const idx = L.findIndex((x, i) => i > 0 && x[0] === k), nl = idx >= 0 ? L[idx][1] + 1 : 1; if (nl > 3 || (idx < 0 && L.length >= 10)) return;
+      const cost = ENCH_COST[Math.min(2, nl - 1)]; if (money < cost) { enNote(`돈이 부족해요 (${fmt(cost - money)} 더 필요)`, 0); playSound('shoot'); return; }
+      money -= cost; if (idx >= 0) L[idx] = [k, nl]; else L.push([k, nl]); tSetEn(t, L); saveOwn(); playSound('cash');
+      enNote(`➕ ${WP[w].n} · ${ENCH[k].ic} ${ENCH[k].n} Lv${nl} 추가!`, 1); renderEnh();
+    }
     function lgAttach() {
       const t = enT; if (!t || !own.ench) return; const w = tW(t), L = tEn(t), base = L[0], k = enLgK;
-      if (!base || ENCH[base[0]].leg || base[1] < 3 || k === null || !ENCH[k] || !ENCH[k].leg || !enchOk(w, ENCH[k]) || (L.some(x => x[0] === k) && ENCH.some((e, q) => e.leg && enchOk(w, e) && !L.some(x => x[0] === q))) || L.length >= 10) return;
+      if (!base || ENCH[base[0]].leg || base[1] < 3 || k === null || !ENCH[k] || !ENCH[k].leg || !enchOk(w, ENCH[k]) || L.some(x => x[0] === k) || L.length >= 10) return;
       if (money < LG_ATT_COST) { enNote(`돈이 부족해요 (${fmt(LG_ATT_COST - money)} 더 필요)`, 0); playSound('shoot'); return; }
       money -= LG_ATT_COST; const le = ENCH[k];
       if (Math.random() < LG_ATT_P) {
