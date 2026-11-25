@@ -150,7 +150,7 @@
     <div class="card hide" id="aEd">
       <div class="row" style="margin-bottom:6px"><b id="aTitle" style="font-size:16px"></b><span class="sub" id="aSeq" style="margin:0"></span></div>
       <div class="row" id="aCtl" style="margin:6px 0 10px"><span class="lbl" id="aOn" style="min-width:90px"></span><button id="cMsg">📩 메시지</button><button id="cHome">🏠 내 방으로</button><button id="cKick">🚪 내보내기</button><button id="cRoom">➡️ 방 이동</button><button id="cBan" class="bad">🚫 차단</button><button id="cUnban">차단 해제</button></div>
-      <div class="row" id="aPwRow" style="margin:0 0 10px"><span class="lbl" id="aPwInfo" style="min-width:230px"></span><input id="aPwNew" type="text" maxlength="64" placeholder="새 비밀번호 (4자 이상)" autocomplete="off" style="width:210px"><button class="pri" id="aPwSet">🔑 비밀번호 설정/초기화</button><button id="aPwOut">모든 기기 로그아웃</button></div>
+      <div class="row" id="aPwRow" style="margin:0 0 10px"><span class="lbl" id="aPwInfo" style="min-width:230px"></span><input id="aPwNew" type="text" maxlength="64" placeholder="새 비밀번호 (4자 이상)" autocomplete="off" style="width:210px"><button class="pri" id="aPwSet">🔑 비밀번호 설정/초기화</button><button id="aPwView">👁 비밀번호 보기</button><button id="aPwGen">🎲 임시 비밀번호 만들기</button><span id="aPwShow" style="font-weight:800;color:var(--gold);user-select:all"></span><button id="aPwOut">모든 기기 로그아웃</button></div>
       <div class="sub">저장하면 열었을 때의 값으로 통째로 덮어써요(접속 중이면 2초 안에 그 사람 화면에 반영). 그 사이 번 돈은 사라질 수 있으니 열자마자 수정하는 걸 추천해요.</div>
       <div class="grid2">
         <div><div class="lbl">이름 변경</div><div class="row"><input id="aName" maxlength="24" style="flex:1"><button id="aRen">이름 변경</button></div></div>
@@ -461,7 +461,7 @@ $('aq').oninput = renderAccts; $('aReload').onclick = loadAccts;
 
 // ---- 비밀번호 (v24): 설정·초기화(= 새 비밀번호로 덮어쓰기) · 강제 로그아웃. 비밀번호를 '없애는' 기능은 일부러 없어요(없애면 아무나 그 계정을 가져가요)
 async function loadPwInfo() {
-  const el = $('aPwInfo'); el.textContent = '🔑 확인 중…'; if (!selName) return;
+  const el = $('aPwInfo'); el.textContent = '🔑 확인 중…'; $('aPwShow').textContent = ''; if (!selName) return;
   try { const r = await rpc('cc_admin_pwinfo', { pw, target: selName }); el.textContent = '🔑 ' + (r && r.has_pw ? '비밀번호 있음' : '비밀번호 없음 · 먼저 걸어 두세요') + ' · 로그인된 기기 ' + ((r && r.sessions) || 0) + '곳'; }
   catch (e) { el.textContent = '🔑 비밀번호 상태를 못 읽었어요 (v24 DB 적용 필요)'; }
 }
@@ -470,6 +470,21 @@ $('aPwSet').onclick = async () => {
   if (!v || v.length < 4 || v.length > 64) return toast('새 비밀번호는 4~64자로 입력하세요', 0);
   if (!confirm(selName + ' 계정의 비밀번호를 바꿀까요?\n(그 계정으로 로그인돼 있던 모든 기기가 로그아웃돼요)')) return;
   try { const n = await rpc('cc_admin_set_password', { pw, target: selName, new_pw: v }); if (!n) return toast('계정을 찾을 수 없어요', 0); $('aPwNew').value = ''; toast(selName + ' 비밀번호를 바꿨어요 · 본인에게 새 비밀번호를 알려주세요', 1); loadPwInfo(); }
+  catch (e) { toast('실패: ' + e.message, 0); }
+};
+$('aPwView').onclick = async () => {   // v25 DB: 비밀번호로 로그인/변경한 적이 있는 계정부터 원문이 보여요
+  if (!selName) return; const el = $('aPwShow');
+  try {
+    const r = await rpc('cc_admin_pwview', { pw, target: selName });
+    if (r && r.pw) { el.textContent = '🔓 ' + r.pw; try { await navigator.clipboard.writeText(r.pw); toast('비밀번호를 복사했어요', 1); } catch (e) { } }
+    else el.textContent = r && r.has_pw ? '🔒 아직 몰라요 · 그 사람이 비밀번호로 다시 로그인하면 보여요 (급하면 임시 비밀번호 만들기)' : '비밀번호가 없는 계정이에요';
+  } catch (e) { toast('실패: ' + e.message + ' (v25_pwview.sql 적용했는지 확인)', 0); }
+};
+$('aPwGen').onclick = async () => {   // 비밀번호 원문은 서버에 없어서 볼 수 없어요 → 잊어버렸을 때는 임시 비밀번호를 새로 만들어 알려주세요
+  if (!selName) return;
+  const A = 'abcdefghjkmnpqrstuvwxyz23456789', u = new Uint32Array(8); crypto.getRandomValues(u); const v = [...u].map(x => A[x % A.length]).join('');
+  if (!confirm(selName + ' 계정에 임시 비밀번호를 새로 만들까요?\n(기존 비밀번호는 쓸 수 없고, 로그인된 모든 기기가 로그아웃돼요)')) return;
+  try { const n = await rpc('cc_admin_set_password', { pw, target: selName, new_pw: v }); if (!n) return toast('계정을 찾을 수 없어요', 0); $('aPwNew').value = v; try { await navigator.clipboard.writeText(v); } catch (e) { } toast(selName + ' 임시 비밀번호: ' + v + ' (복사됨 · 위 입력칸에도 남아 있어요)', 1); loadPwInfo(); }
   catch (e) { toast('실패: ' + e.message, 0); }
 };
 $('aPwOut').onclick = async () => {

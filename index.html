@@ -2354,7 +2354,7 @@
   function pUpd(c, dt, tg, stars) {
     const da = angN(Math.atan2(tg.y - c.y, tg.x - c.x) - c.a); let sg = Math.max(-1, Math.min(1, da * 2.5));
     if (Math.abs(da) > 2.4) { c.ts = c.ts || (da > 0 ? 1 : -1); sg = c.ts; } else c.ts = 0;
-    drive(c, 1, sg, dt, (290 + stars * 15) * (c.spd || 1));
+    drive(c, 1, sg, dt, (290 + stars * 15) * (c.spd || 1) * (MP.raid() ? 1 : 0.9));   // v25: 일반 모드 추격차 10% 느림
     if (Math.abs(c.v) < 20) c.stuck += dt; else c.stuck = 0;
     if (c.stuck > 1.2) { c.a += Math.PI * (Math.random() < 0.5 ? 0.7 : -0.7); c.stuck = 0; }
   }
@@ -2391,7 +2391,7 @@
   // 1) 도시에는 순찰차(c.pat)가 도로를 돌아다녀요  2) 수배(★) 중인 나를 발견하면 무전으로 지원 요청 → 주변 순찰차가 합류, 부족한 인원은 멀리서 증원
   // 3) ★이 높을수록 경찰차 수 + 헬기 수가 늘고, 4★부터 군대(장갑차·탱크·공격헬기)  4) 강도를 하면 경보가 울려서 바로 출동해요
   let seenT = -99, called = false, patT = 0, heliMsg = 0; const hms = [], hmM = new THREE.MeshBasicMaterial({ color: 0xff7a1a });
-  const wantCars = st => (MP.raid() ? [0, 2, 3, 5, 7, 9] : [0, 1, 2, 4, 6, 9])[st] | 0, wantHeli = st => [0, 0, 0, 1, 2, 3][st] | 0;
+  const wantCars = st => (MP.raid() ? [0, 2, 3, 5, 7, 9] : [0, 1, 1, 3, 4, 6])[st] | 0, wantHeli = st => (MP.raid() ? [0, 0, 0, 1, 2, 3] : [0, 0, 0, 0, 1, 2])[st] | 0;   // v25: 일반 모드는 경찰차·헬기 수를 줄이고 헬기는 4★부터
   function spawnPatrol() {
     const tg = P.onFoot ? P : (P.car || P);
     for (let n = 0; n < 30; n++) {
@@ -2404,7 +2404,7 @@
   }
   // 순찰차 c 가 나를 볼 수 있는가: 거리(420 · 옥상/공중이면 300) 안이고 사이에 건물이 없을 때
   function copSees(c, tg) {
-    const R = (tg.z || 0) > 40 ? 300 : 420, d = Math.hypot(tg.x - c.x, tg.y - c.y); if (d > R) return false;
+    const R = MP.raid() ? ((tg.z || 0) > 40 ? 300 : 420) : ((tg.z || 0) > 40 ? 240 : 330), d = Math.hypot(tg.x - c.x, tg.y - c.y);   // v25: 일반 모드는 시야가 짧아요 if (d > R) return false;
     for (let i = 1; i < 12; i++) { const x = c.x + (tg.x - c.x) * i / 12, y = c.y + (tg.y - c.y) * i / 12; if (bh(x, y) > (tg.z || 0) + 25) return false; }
     return true;
   }
@@ -2415,7 +2415,7 @@
     if (!called) { called = true; msg(need > 0 || MP.raid() ? '📻 순찰 경찰이 수배자를 발견! 지원 요청 중…' : '👮 순찰 경찰에게 들켰다! 이 경찰만 처치하면 돼요'); playSound('siren'); }
     const pool = cars.filter(o => o.type === 'c' && o.pat && o !== c && Math.hypot(o.x - tg.x, o.y - tg.y) < 2000).sort((a, b) => Math.hypot(a.x - tg.x, a.y - tg.y) - Math.hypot(b.x - tg.x, b.y - tg.y));
     for (const o of pool) { if (need-- <= 0) break; o.pat = 0; o.seek = null; }
-    if (stars >= 3 && !heliMsg) { heliMsg = 1; msg(stars >= 4 ? '🚨 지원 요청: 군대와 공격헬기 출동!' : '🚁 지원 요청: 경찰 헬기 출동!'); }
+    if (wantHeli(stars) > 0 && !heliMsg) { heliMsg = 1; msg(stars >= 4 ? '🚨 지원 요청: 군대와 공격헬기 출동!' : '🚁 지원 요청: 경찰 헬기 출동!'); }
   }
   function alarmCall(tg, stars) {   // 강도 경보: 가장 가까운 순찰차를 바로 출동시킴 (없으면 증원이 멀리서 옴)
     seenT = T; if (!called) { called = true; msg('🚨 강도 신고! 경찰이 출동합니다'); playSound('siren'); }
@@ -2447,7 +2447,7 @@
           if (m && !martial) { martial = true; showMartial(); MP.martial(); }
         } else if (needTank) {
           cars.push(Object.assign(mkCar(x, y, ang, '#fff', 'c'), VK.tank, { kn: '군용 탱크' })); if (!martial) { martial = true; showMartial(); MP.martial(); }
-        } else if (mil && Math.random() < 0.5) {
+        } else if (mil && Math.random() < 0.33) {   // v25: 4★ 군대 비율 완화 (일반 모드 전용)
           const mType = Math.random();   // 4성 이상: 군대 (장갑차·탱크)
           cars.push(Object.assign(mkCar(x, y, ang, '#fff', 'c'), mType < 0.6 ? VK.apc : VK.tank, { kn: mType < 0.6 ? '군용 장갑차' : '군용 탱크' }));
           if (!martial) { martial = true; showMartial(); MP.martial(); }
@@ -2607,7 +2607,7 @@
     for (let i = tz.length - 1; i >= 0; i--) {
       const z = tz[i], zf = lgFrz > 0 ? 0.04 : 1; z.t -= dt * (lgFrz > 0 ? 0.1 : 1); z.x += z.dx * 520 * dt * zf; z.y += z.dy * 520 * dt * zf; let dead = z.t <= 0 || solid(z.x, z.y, 0);
       if (!dead && P.onFoot && tased <= 0 && Math.hypot(P.x - z.x, P.y - z.y) < 11) {
-        dead = true; tased = 1.6; bust = Math.min(1.69, bust + 0.6); shake = 8; msg('테이저 피격!');
+        dead = true; tased = 1.6; bust = Math.min(1.69, bust + (MP.raid() ? 0.6 : 0.45)); shake = 8; msg('테이저 피격!');
       }
       z.m.position.set(z.x, 9, z.y); if (dead) { sc.remove(z.m); tz.splice(i, 1); }
     }
@@ -2702,10 +2702,10 @@
         let left = n; for (let q = 0; q < squads && left > 0; q++) { const m = Math.min(per, left); left -= m; raidSq = null; raidSqN = m - 1; for (let i = 0; i < m; i++) spawnPolice(hw, MP.raidTank(), wide ? base + q * 1.5708 : undefined); }
         raidSqN = 3; pt = 1; msg(wide ? '🚨 경찰 ' + n + '명이 사방에서 포위해 와요!' : '🚨 경찰 부대 ' + n + '명이 대열을 이루어 출동!');
       }
-    } else if (police < want && pt <= 0 && callActive) { spawnPolice(hw, rdOn ? MP.raidTank() : 0); pt = rdOn ? 0.45 : 1.5; }
+    } else if (police < want && pt <= 0 && callActive) { spawnPolice(hw, rdOn ? MP.raidTank() : 0); pt = rdOn ? 0.45 : 2.4; }   // v25: 일반 모드 증원 간격 1.5초 → 2.4초
     let patN = 0; for (const c of cars) if (c.pat) patN++;
     if (!MP.hall() && patN < 8 && patT <= 0) { spawnPatrol(); patT = 1.2; }
-    if (!close && heat > 0) heat = Math.max(0, heat - 0.07 * dt);
+    if (!close && heat > 0) heat = Math.max(0, heat - (MP.raid() ? 0.07 : 0.12) * dt);   // v25: 일반 모드는 수배가 더 빨리 내려가요
     const sp = P.onFoot ? 0 : Math.abs(P.car.v);
 
     if (baseP && !baseSeen && Math.hypot(tg.x - baseP.x, tg.y - baseP.y) < 300) { baseSeen = 1; msg('군사기지 발견! 탱크·장갑차에 탈 수 있어요'); }
@@ -2714,7 +2714,7 @@
     if (MP.raid() || stars >= 3) for (const c of cars) if (c.type === 'c' && !c.pat && c.kind === 'heli' && Math.hypot(c.x - tg.x, c.y - tg.y) < 130) { airLock = true; break; }
 
     if (tased > 0 && stars > 0) bust = Math.min(1.69, bust + dt * 0.5);
-    if (near && sp < 100 && stars > 0) bust += dt * 1.3; else if (airLock && stars > 0) bust += dt * 0.7; else bust = Math.max(0, bust - dt * 1.5);
+    if (near && sp < 100 && stars > 0) bust += dt * (MP.raid() ? 1.3 : 0.9); else if (airLock && stars > 0) bust += dt * (MP.raid() ? 0.7 : 0.5); else bust = Math.max(0, bust - dt * (MP.raid() ? 1.5 : 2.2));   // v25: 일반 모드 체포 게이지는 느리게 차고 빨리 빠져요
     if (bust > 1.7) busted();
 
     if (!P.onFoot && P.car.hp <= 0) {
@@ -3104,10 +3104,7 @@
           <div style="margin-top:5px;opacity:.65;font-size:11px">로그인하면 이 기기에서는 다음에도 자동으로 들어와요</div>
         </div>
         <div id="mpAuthIn" style="display:none">
-          <div class="row"><b id="mpWho" style="flex:1"></b><button class="g" id="mpLogout">로그아웃</button></div>
-          <div class="row"><input id="mpName" maxlength="12" placeholder="새 닉네임"><button class="g" id="mpNameBtn">닉네임 변경</button></div>
-          <div class="row"><input id="mpPwOld" type="password" maxlength="64" placeholder="현재 비번" autocomplete="current-password"><input id="mpPwNew" type="password" maxlength="64" placeholder="새 비번" autocomplete="new-password"></div>
-          <div class="row"><button class="g" id="mpPwBtn" style="flex:1">비밀번호 변경</button></div>
+          <div class="row"><b id="mpWho" style="flex:1"></b><button class="g" id="mpAcctBtn">⚙ 계정</button><button class="g" id="mpLogout">로그아웃</button></div>
         </div>
         <div class="row"><input id="mpJoin" maxlength="6" placeholder="친구 방 코드" style="text-transform:uppercase"><button id="mpJoinBtn">참가</button></div>
         <div class="row" id="mpLeaveRow" style="display:none"><button class="g" id="mpLeave" style="flex:1">내 방으로 돌아가기</button></div>
@@ -3115,6 +3112,24 @@
         <div class="st" id="mpSt"></div>
       </div>`;
     document.body.appendChild(ui);
+    // v25: 닉네임·비밀번호 변경은 패널에 두지 않고 ⚙ 계정을 눌렀을 때만 따로 열려요 (화면을 덜 가려요)
+    const acct = document.createElement('div'); acct.id = 'mpAcct';
+    acct.innerHTML = `<style>#mpAcct{display:none;position:fixed;inset:0;z-index:70;background:rgba(5,7,12,.6);align-items:center;justify-content:center;font-family:system-ui}
+      #mpAcct .bx{width:min(340px,92vw);background:#12151d;border:1.5px solid rgba(255,210,63,.45);border-radius:14px;padding:16px;color:#fff;box-shadow:0 20px 50px rgba(0,0,0,.5)}
+      #mpAcct .hd{display:flex;align-items:center;justify-content:space-between;font-size:15px}
+      #mpAcct h4{margin:16px 0 0;font:700 13px system-ui;color:#ffd23f}
+      #mpAcct .r{display:flex;gap:6px;margin-top:8px;align-items:center}
+      #mpAcct input{flex:1;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.25);border-radius:7px;color:#fff;padding:7px 9px;font:14px system-ui;outline:none;min-width:0}
+      #mpAcct button{background:#ffd23f;color:#111;border:0;border-radius:7px;padding:7px 12px;font:700 13px system-ui;cursor:pointer;white-space:nowrap}
+      #mpAcct button.g{background:rgba(255,255,255,.14);color:#fff}</style>
+      <div class="bx"><div class="hd"><b id="mpAcctWho">⚙ 내 계정</b><button class="g" id="mpAcctX">닫기</button></div>
+        <h4>닉네임 변경</h4>
+        <div class="r"><input id="mpName" maxlength="12" placeholder="새 닉네임"><button id="mpNameBtn">변경</button></div>
+        <h4>비밀번호 변경</h4>
+        <div class="r"><input id="mpPwOld" type="password" maxlength="64" placeholder="현재 비밀번호" autocomplete="current-password"></div>
+        <div class="r"><input id="mpPwNew" type="password" maxlength="64" placeholder="새 비밀번호 (4자 이상)" autocomplete="new-password"><button id="mpPwBtn">변경</button></div>
+      </div>`;
+    document.body.appendChild(acct);
     const chatBox = document.createElement('div'); chatBox.id = 'mpchat';
     chatBox.innerHTML = '<input id="mpChatIn" maxlength="120" placeholder="메시지 입력 후 Enter (Esc 취소)">';
     document.body.appendChild(chatBox);
@@ -3123,7 +3138,12 @@
     const mctx = mapC.getContext('2d');
     const $ = id => document.getElementById(id);
     $('mpMy').textContent = myCode; showAuthUI();
-    for (const el of [ui, chatBox]) for (const ev of ['keydown', 'keyup', 'keypress']) el.addEventListener(ev, e => e.stopPropagation());
+    for (const el of [ui, chatBox, acct]) for (const ev of ['keydown', 'keyup', 'keypress']) el.addEventListener(ev, e => e.stopPropagation());
+    const openAcct = () => { if (guest) return; try { document.exitPointerLock && document.exitPointerLock(); } catch (e) {} $('mpAcctWho').textContent = '⚙ ' + myName; acct.style.display = 'flex'; };
+    const closeAcct = () => { acct.style.display = 'none'; $('mpPwOld').value = ''; $('mpPwNew').value = ''; $('mpName').value = ''; };
+    $('mpAcctBtn').onclick = openAcct; $('mpAcctX').onclick = closeAcct;
+    acct.addEventListener('mousedown', e => { e.stopPropagation(); if (e.target === acct) closeAcct(); });
+    acct.addEventListener('keydown', e => { if (e.key === 'Escape') closeAcct(); });
     ui.addEventListener('mousedown', e => e.stopPropagation());
     ui.addEventListener('touchstart', e => e.stopPropagation(), { passive: true });
     $('mpTog').onclick = () => { ui.classList.toggle('min'); $('mpTog').textContent = ui.classList.contains('min') ? '열기' : '접기'; };
@@ -5394,16 +5414,23 @@
     }
     async function raidClaim(ev, diff) {
       let res = { ok: false, err: 'net' };
+      if (guest) return { ok: false, err: 'no_profile' };   // v25: 로그인 안 한 게스트는 서버 보상 불가 (일반 레이드는 로컬 보상, 이벤트는 안내)
       try {
         own.gren = gren; own.tnt = tnt;
         for (let i = 0; i < 40 && profBusy; i++) await sleep(50);
         await saveProfile(true); for (let i = 0; i < 40 && profBusy; i++) await sleep(50);
-        profBusy = true;
-        try {
-          const { data } = await sb.rpc('cc_raid_claim', { p_name: myName, p_diff: diff, p_event: ev ? ev.id : null, p_token: myToken }); if (data) res = data;
-          const before = admSeq; await admPoll(true);
-          if (res.ok && admSeq === before) await loadProfile();
-        } finally { profBusy = false; }
+        for (let attempt = 0; attempt < 4; attempt++) {   // v25: 네트워크가 잠깐 끊겨도 최대 4번 다시 시도
+          profBusy = true;
+          try {
+            const { data } = await sb.rpc('cc_raid_claim', { p_name: myName, p_diff: diff, p_event: ev ? ev.id : null, p_token: myToken });
+            res = data && typeof data === 'object' ? data : { ok: false, err: 'net' };
+            const before = admSeq; await admPoll(true);   // 서버가 이미 지급했다면 여기서 돈·무기가 반영돼요
+            if (res.ok && admSeq === before) await loadProfile();
+          } catch (e) { res = { ok: false, err: 'net' }; } finally { profBusy = false; }
+          res._try = attempt;
+          if (res.err !== 'net') break;
+          await sleep(1500 * (attempt + 1));
+        }
       } catch (e) {}
       return res;
     }
@@ -5418,13 +5445,15 @@
           const t = fmtRew(res.reward);
           if (ev) { title('🎉 선착순 1등!', `${ev.name} 보상 획득 · ${t}`, '#ffd23f'); event(`님이 이벤트 레이드 [${ev.name}] 선착순 1등을 차지했습니다!!! 🥇`); } else title('🎁 클리어 보상', t, '#7bd44a');
           msg('🎁 ' + t + (res.inv ? ` · 이미 가진 무기 ${res.inv}자루는 인벤토리(I)에 보관` : '') + (res.skipped ? ` · 인벤토리가 가득 차서 ${res.skipped}자루는 못 받았어요` : ''));
-        } else if (res.err === 'taken') { title('😢 선착순 마감', `${ev ? ev.name : ''} · 이미 ${res.winner} 님이 가장 먼저 깼어요`, '#ff8a5a'); msg(`😢 선착순 마감 · 우승 ${res.winner}`); }
+        } else if (res.err === 'taken' && res.winner === myName) { msg('🎁 보상은 이미 지급됐어요 · 돈과 인벤토리(I)를 확인해 보세요'); addFeed('🎁 이벤트 보상 지급 완료', '#7bd44a'); }
+        else if (res.err === 'taken') { title('😢 선착순 마감', `${ev ? ev.name : ''} · 이미 ${res.winner} 님이 가장 먼저 깼어요 (파티원이어도 보상은 1명에게만 가요)`, '#ff8a5a'); msg(`😢 선착순 마감 · 우승 ${res.winner}`); }
         else if (res.err === 'closed') msg('⌛ 이벤트 시간이 끝나서 보상이 없어요');
         else if (res.err === 'no_profile') {
-          if (ev) msg('이벤트 보상은 계정이 있어야 받을 수 있어요');
+          if (ev) { title('🔑 로그인이 필요해요', '이벤트 보상은 로그인한 계정만 받을 수 있어요 · 멀티플레이 창에서 로그인', '#ff8a5a'); msg('이벤트 보상은 로그인한 계정만 받을 수 있어요 · 멀티플레이 창에서 로그인해 주세요'); }
           else { const rw = raidInfo && raidInfo.rewards && raidInfo.rewards[diff] ? raidInfo.rewards[diff].reward : { money: RAID[diff].rw }; rewLocal(rw); title('🎁 클리어 보상', fmtRew(rw), '#7bd44a'); }
-        } else if (res.err === 'too_fast') msg('보상은 90초에 한 번만 받을 수 있어요');
-        else msg('보상 처리에 실패했어요 (네트워크)');
+        } else if (res.err === 'too_fast') msg(res._try > 0 ? '🎁 보상은 이미 지급됐어요 · 돈과 인벤토리(I)를 확인해 보세요' : '보상은 90초에 한 번만 받을 수 있어요');
+        else if (res.err === 'auth') msg('로그인이 풀려서 보상을 못 받았어요 · 다시 로그인해 주세요');
+        else msg('보상 처리에 실패했어요 (' + (res.err === 'net' ? '네트워크 · 자동으로 4번 재시도했어요' : res.err || '알 수 없음') + ')');
       });
     }
     function raidTick(dt) {
@@ -5595,7 +5624,7 @@
     });
 
     const saved = guest ? 0 : +LS.get('cc_money'); if (saved > 0) money = saved;
-    if (guest) setTimeout(() => { title('👤 ' + myName, '게스트는 저장되지 않습니다! 로그인/가입을 해주세요', '#ffd23f'); addFeed('⚠ 게스트는 저장되지 않아요 — 계정을 만들거나 로그인하면 그때부터 저장돼요', '#ffd23f'); }, 2000);
+    if (guest) setTimeout(() => { loginHint ? title('🔑 ' + loginHint + ' 님, 다시 로그인해 주세요', '이제 계정에 비밀번호가 필요해요 · 멀티플레이 창에서 로그인 (안 하면 보상·저장이 안 돼요)', '#ff8a5a') : title('👤 ' + myName, '게스트는 저장되지 않습니다! 로그인/가입을 해주세요', '#ffd23f'); addFeed('⚠ 게스트는 저장되지 않아요 — 계정을 만들거나 로그인하면 그때부터 저장돼요', '#ffd23f'); }, 2000);
     addFeed(`내 방 코드 ${myCode} — 친구가 이 코드로 참가하면 같이 플레이`, '#ffd23f');
     refreshUI();
     setTimeout(() => { if (!raidResume()) go(myCode); }, 300);
