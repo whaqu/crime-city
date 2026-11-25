@@ -1751,7 +1751,7 @@
   // v26: 시야를 가리면 안 되는 무기(연사·저격·관통 계열)는 레전드/합일 이펙트를 가볍게 — 화면 번쩍임 1/5 · 타이틀 작게 · 기둥/광선 얇게
   const LG_LITE = new Set([1, 5, 6, 7, 12, 13, 22]); let lgLiteT = 0; const lgLite = () => performance.now() < lgLiteT;
   const LG_CH = 1.0;   // v23: 레전드 인첸트 무기는 이 시간(초)만큼 꾹 눌러 게이지가 빨개져야 레전드/합일 공격이 나가요
-  let lgCharged = true, lgChg = 0, lgTap = 0, lgFuI = 0, lgBigT = 0, lgFuEl = null, lgSNow = { n: 0 }, lgAN = 0, lgCv = 0, lgN = 0, lgFrz = 0, lgTwT = 0, lgAuraT = 0, lgPopT = 0, lgPopN = 0, lgRain = null, lgTA = null, lgBnEl = null;
+  let lgCharged = true, lgChg = 0, lgTap = 0, lgFuI = 0, lgBigT = 0, lgFuEl = null, lgSNow = { n: 0 }, lgAN = 0, lgCv = 0, lgN = 0, lgFrz = 0, lgTwT = 0, lgAuraT = 0, lgPopT = 0, lgPopN = 0, lgRain = null, lgWx = null, lgTA = null, lgBnEl = null;
   { const st = document.createElement('style');
     st.textContent = `.lgpop{position:fixed;z-index:34;pointer-events:none;font:900 18px system-ui;text-shadow:0 0 8px currentColor,0 2px 3px #000;animation:lgUp .9s ease-out forwards}
       @keyframes lgUp{0%{opacity:0;transform:translate(-50%,-50%) scale(.6)}15%{opacity:1;transform:translate(-50%,-50%) scale(1.15)}100%{opacity:0;transform:translate(-50%,-140%) scale(1)}}
@@ -1887,7 +1887,22 @@
     23: { nm: '영원한 겨울', c: [0x8fe8ff, 0xffffff, 0x4aa8ff, 0xd8f8ff], st: 'pulse', n: 4, d: 0.3, R: 440, dmg: 60, fz: 6, ice: 1 },
     24: { nm: '천검 낙하', c: [0xe6dcff, 0xb9a6ff, 0xffffff, 0x7a5cff], st: 'swords', n: 12, R: 210, br: 90, bd: 170 }
   };
-  const LG_FUW_DEF = { nm: '시공 붕괴', c: [0x8fd8ff, 0xffd23f, 0xc27bff, 0x7fe0ff], st: 'classic' };
+  // v26.1: 합일의 균열·시계·날씨·오라를 무기 분위기에 맞춰요 (영원한 겨울 = 눈 내림 + 스노우볼, 화염 = 불씨 + 불덩이 …)
+  const LG_THEMES = {
+    void:  { core: 0x000000, r: [0xc27bff, 0xff4df0, 0x6fd8ff], h: 0x7a2cff, g: 0xa65cff, p: [0xc27bff, 0xff4df0, 0x6fd8ff], fl: 'rgba(60,10,110,1)', vg: 'rgba(30,70,150,.75)', wx: null },
+    ice:   { core: 0xf2fbff, r: [0xbff3ff, 0x8fe8ff, 0xffffff], h: 0x9fe0ff, g: 0xd8f8ff, p: [0xffffff, 0xbff3ff, 0x8fe8ff], fl: 'rgba(190,235,255,1)', vg: 'rgba(140,200,255,.55)', wx: 'snow' },
+    fire:  { core: 0xff6a1a, r: [0xffc040, 0xff3a10, 0xfff2a0], h: 0xff5a10, g: 0xff7a1a, p: [0xff7a1a, 0xffc040, 0xff3a10], fl: 'rgba(120,30,0,1)', vg: 'rgba(200,60,10,.5)', wx: 'ember' },
+    volt:  { core: 0xdff6ff, r: [0x7ad7ff, 0xffffff, 0xfff2a0], h: 0x3a8cff, g: 0x7ad7ff, p: [0x7ad7ff, 0xffffff, 0xfff2a0], fl: 'rgba(40,90,170,1)', vg: 'rgba(60,120,220,.5)', wx: 'spark' },
+    gold:  { core: 0xfff2a0, r: [0xffd23f, 0xffffff, 0xffa800], h: 0xffc933, g: 0xffe27a, p: [0xffd23f, 0xfff2a0, 0xffa800], fl: 'rgba(120,90,10,1)', vg: 'rgba(220,170,40,.45)', wx: 'mote' },
+    blast: { core: 0xffb040, r: [0xff8a30, 0xfff2a0, 0xffffff], h: 0xff7a20, g: 0xffa040, p: [0xff8a30, 0xffd060, 0xffffff], fl: 'rgba(90,50,10,1)', vg: 'rgba(180,110,40,.45)', wx: 'ash' },
+    cyan:  { core: 0x6fffe0, r: [0x3dffb0, 0xbfffe8, 0xffffff], h: 0x10c080, g: 0x3dffb0, p: [0x3dffb0, 0xbfffe8, 0x3dffe0], fl: 'rgba(10,80,60,1)', vg: 'rgba(30,200,150,.45)', wx: 'mote' },
+    sword: { core: 0xe6dcff, r: [0xb9a6ff, 0xffffff, 0x7a5cff], h: 0x9a86ff, g: 0xb9a6ff, p: [0xe6dcff, 0xb9a6ff, 0xffffff], fl: 'rgba(50,30,110,1)', vg: 'rgba(130,100,230,.45)', wx: 'feather' },
+    pink:  { core: 0xff6aa8, r: [0xff2e88, 0xffd0e8, 0xffffff], h: 0xff2e88, g: 0xff6aa8, p: [0xff2e88, 0xff9ac8, 0xffd060], fl: 'rgba(110,10,60,1)', vg: 'rgba(230,60,140,.45)', wx: 'confetti' }
+  };
+  const LG_TH = { 0: 'blast', 1: 'blast', 2: 'blast', 3: 'fire', 4: 'volt', 5: 'blast', 6: 'blast', 7: 'sword', 8: 'pink', 9: 'fire', 10: 'cyan', 11: 'fire', 12: 'gold', 13: 'pink', 14: 'volt', 15: 'blast', 16: 'void', 17: 'fire', 18: 'cyan', 19: 'pink', 20: 'gold', 21: 'fire', 22: 'gold', 23: 'ice', 24: 'sword' };
+  for (const k of Object.keys(LG_FUW)) LG_FUW[k].th = LG_THEMES[LG_TH[k]] || LG_THEMES.void;
+  const lgTh = w => LG_THEMES[LG_TH[w]] || LG_THEMES.void;
+  const LG_FUW_DEF = { nm: '시공 붕괴', c: [0x8fd8ff, 0xffd23f, 0xc27bff, 0x7fe0ff], st: 'classic', th: LG_THEMES.void };
   function lgFuHit(x, y, R, dmg, fz) {   // 범위 안 전부에게 피해(+동결)
     for (const e of lgTargets(x, y, R)) { lgHit(e.k, e.o, dmg); if (fz) { if (e.k === 'o') e.o.fz = Math.max(e.o.fz || 0, fz); else if (e.k === 'c' && cars.includes(e.o)) { e.o.stun = Math.max(e.o.stun || 0, fz); e.o.v *= 0.05; } } }
   }
@@ -1962,7 +1977,7 @@
       });
     },
     hole(x, y, W) {   // 블랙홀 건: 균열 3개 + 안으로 모이는 충격파
-      voidAdd(x + 120, y, 6); voidAdd(x - 120, y, 6);
+      voidAdd(x + 120, y, 6, W.th); voidAdd(x - 120, y, 6, W.th);
       for (let j = 0; j < 4; j++) lgDelay(j * 0.2, () => { lgRing(x, y, W.c[j % 4], W.R - j * 60, 10, 0.5, 3 + j, 0.8); });
       lgDelay(0.9, () => { boom(x, y, 240, 420); lgFuHit(x, y, W.R, 80, 3); lgFlash('rgba(10,0,30,1)', 0.7, 600, true); });
     },
@@ -2009,7 +2024,7 @@
     lgCoins(x, y, 10, 30, 220);
     for (let i = 0; i < 50; i++) { const a = rnd(0, 6.283), v = rnd(80, 340); lgP(x, y, 6, Math.cos(a) * v, Math.sin(a) * v, rnd(60, 300), { col: cols[i % 4], life: rnd(0.5, 1.1), sz: rnd(1.4, 3.4), g: 380 }); }
     boom(x, y, 220, 400); MP.pvpRad(x, y, 200, 70, 9);
-    money += 20000; voidAdd(x, y, 7); timeWarp(x, y);   // 공통: 합일의 공허 균열 7초 + 시간 정지 + $20,000
+    money += 20000; voidAdd(x, y, 7, W.th); timeWarp(x, y, W.th); lgWx = { x, y, t: 5, R: Math.min(420, (W.R || 300) + 120), th: W.th };   // 공통: 합일의 균열(무기 테마) 7초 + 시간 정지 + $20,000 + 날씨
     lgFlash('rgba(255,250,225,1)', 0.8, 700, true); shake = Math.max(shake, lgLite() ? 8 : 20); playSound('converge'); lgPop(x, y, 40, '+$20,000', '#fff2a0', true, true);
   }
   // ---- 🌩️ 뇌신: 낙뢰 + 번개 연쇄 + 감전 정지
@@ -2050,34 +2065,34 @@
 
   // ---- 🌌 공허: 공허의 균열 (15초 · 최대 3개) · 소멸 시 대폭발
   const voidCount = () => { let n = 0; for (const w of wells) if (w.vd) n++; return n; };
-  function voidAdd(x, y, dur) {
-    dur = dur || 15;
+  function voidAdd(x, y, dur, th) {
+    dur = dur || 15; th = th || LG_THEMES.void;
     if (voidCount() >= 3) { const old = wells.find(w => w.vd); if (old) old.t = 0; }   // 4번째부터는 가장 오래된 균열이 터져요
     const z = 36, mk = (geo, mt) => new THREE.Mesh(geo, mt);
-    const m = mk(new THREE.SphereGeometry(1, 16, 16), new THREE.MeshBasicMaterial({ color: 0x000000 }));
-    const rg = mk(new THREE.TorusGeometry(1, 0.1, 8, 40), new THREE.MeshBasicMaterial({ color: 0xc27bff, transparent: true, opacity: 0.9 }));
-    const rg2 = mk(new THREE.TorusGeometry(1, 0.06, 8, 40), lgMat(0xff4df0, 0.8)), rg3 = mk(new THREE.TorusGeometry(1, 0.05, 8, 40), lgMat(0x6fd8ff, 0.7));
-    const halo = mk(new THREE.SphereGeometry(1, 16, 16), lgMat(0x7a2cff, 0.28)), gr = mk(lgGeo.ring, lgMat(0xa65cff, 0.3)); gr.rotation.x = -Math.PI / 2;
+    const m = mk(new THREE.SphereGeometry(1, 16, 16), new THREE.MeshBasicMaterial({ color: th.core }));
+    const rg = mk(new THREE.TorusGeometry(1, 0.1, 8, 40), new THREE.MeshBasicMaterial({ color: th.r[0], transparent: true, opacity: 0.9 }));
+    const rg2 = mk(new THREE.TorusGeometry(1, 0.06, 8, 40), lgMat(th.r[1], 0.8)), rg3 = mk(new THREE.TorusGeometry(1, 0.05, 8, 40), lgMat(th.r[2], 0.7));
+    const halo = mk(new THREE.SphereGeometry(1, 16, 16), lgMat(th.h, 0.28)), gr = mk(lgGeo.ring, lgMat(th.g, 0.3)); gr.rotation.x = -Math.PI / 2;
     for (const o of [m, rg, rg2, rg3, halo, gr]) { o.position.set(x, o === gr ? 2.5 : z, y); o.scale.setScalar(0.01); sc.add(o); }
-    wells.push({ x, y, z, t: dur, T0: dur, long: 0, vd: 1, S: lgS(), m, rg, rg2, rg3, halo, gr, ex: [rg2, rg3, halo, gr] });
-    lgRing(x, y, 0xc27bff, 10, 260, 0.8); lgFlash('rgba(60,10,110,1)', 0.45, 700); shake = Math.max(shake, 6); lgBanner('🌌 공허의 균열', '#c9a0ff'); playSound('void');
+    wells.push({ x, y, z, t: dur, T0: dur, long: 0, vd: 1, S: lgS(), th, lite: lgLite(), m, rg, rg2, rg3, halo, gr, ex: [rg2, rg3, halo, gr] });
+    lgRing(x, y, th.r[0], 10, 260, 0.8); lgFlash(th.fl, 0.45, 700); shake = Math.max(shake, 6); lgBanner(th === LG_THEMES.void ? '🌌 공허의 균열' : '🌀 합일의 균열', '#c9a0ff'); playSound('void');
   }
   function voidVis(w, k) {
-    const c = Math.min(1, w.t / 0.7) * k;
-    w.m.scale.setScalar(13 * c * (1 + Math.sin(T * 14) * 0.06)); w.halo.scale.setScalar(27 * c * (1 + Math.sin(T * 6) * 0.08));
+    const c = Math.min(1, w.t / 0.7) * k, LQ = w.lite ? 0.45 : 1;   // 가벼운 모드(저격·연사 무기)는 균열 후광이 작고 투명해요
+    w.m.scale.setScalar(13 * c * (1 + Math.sin(T * 14) * 0.06)); w.halo.scale.setScalar(27 * c * LQ * (1 + Math.sin(T * 6) * 0.08));
     w.rg.rotation.set(Math.PI / 2.3, 0, T * 5); w.rg.scale.setScalar(40 * c);
     w.rg2.rotation.set(Math.PI / 2 + 0.6, T * 3, 0); w.rg2.scale.setScalar(54 * c);
     w.rg3.rotation.set(0.5, T * 2.2, T * 4); w.rg3.scale.setScalar(68 * c);
-    w.gr.scale.setScalar(340 * c * (1 + Math.sin(T * 5) * 0.02)); w.gr.material.opacity = 0.22 + 0.12 * Math.sin(T * 6);
+    w.gr.scale.setScalar(340 * c * LQ * (1 + Math.sin(T * 5) * 0.02)); w.gr.material.opacity = (0.22 + 0.12 * Math.sin(T * 6)) * LQ;
     if (lps.length < 330 && k >= 1) for (let n = 0; n < 3; n++) {
       const r = rnd(130, 330), z0 = w.z + rnd(-30, 30);
       const cn = w.S && w.S.l_midas && n === 0;   // 🔗 금화 소용돌이
-      lgP(0, 0, z0, 0, 0, (w.z - z0) / 0.85, { col: cn ? 0xffc933 : [0xc27bff, 0xff4df0, 0x6fd8ff][n % 3], coin: cn, life: 0.85, sz: cn ? 0.9 : rnd(1.6, 3), orb: { cx: w.x, cy: w.y, ang: rnd(0, 6.283), rad: r, av: 2.8, rv: -r / 0.85 } });
+      lgP(0, 0, z0, 0, 0, (w.z - z0) / 0.85, { col: cn ? 0xffc933 : (w.th || LG_THEMES.void).p[n % 3], coin: cn, life: 0.85, sz: cn ? 0.9 : rnd(1.6, 3), orb: { cx: w.x, cy: w.y, ang: rnd(0, 6.283), rad: r, av: 2.8, rv: -r / 0.85 } });
     }
   }
   function voidEnd(w) {
-    boom(w.x, w.y, 170, 260); lgRing(w.x, w.y, 0xffffff, 10, 300, 0.6); lgRing(w.x, w.y, 0xc27bff, 10, 230, 0.9, 3);
-    for (let i = 0; i < 40; i++) { const a = rnd(0, 6.283), s = rnd(80, 320); lgP(w.x, w.y, w.z, Math.cos(a) * s, Math.sin(a) * s, rnd(-60, 200), { col: i % 2 ? 0xc27bff : 0xff4df0, life: rnd(0.5, 1), sz: rnd(1.6, 3.2), g: 160, drag: 1.2 }); }
+    boom(w.x, w.y, 170, 260); lgRing(w.x, w.y, 0xffffff, 10, 300, 0.6); lgRing(w.x, w.y, (w.th || LG_THEMES.void).r[0], 10, 230, 0.9, 3);
+    for (let i = 0; i < 40; i++) { const a = rnd(0, 6.283), s = rnd(80, 320); lgP(w.x, w.y, w.z, Math.cos(a) * s, Math.sin(a) * s, rnd(-60, 200), { col: (w.th || LG_THEMES.void).p[i % 2], life: rnd(0.5, 1), sz: rnd(1.6, 3.2), g: 160, drag: 1.2 }); }
     if (w.S && w.S.l_midas) { money += 20000; lgCoins(w.x, w.y, w.z, 40, 300); lgPop(w.x, w.y, w.z + 20, '+$20,000', '#fff2a0', true); }
     if (w.S && w.S.l_thunder) for (let i = 0; i < 3; i++) lgSkyBolt(w.x + rnd(-150, 150), w.y + rnd(-150, 150), 0xd9a8ff);
     lgFlash('rgba(235,215,255,1)', 0.55, 500); shake = Math.max(shake, 14); playSound('implode');
@@ -2085,22 +2100,23 @@
 
   // ---- ⏳ 시간 지배: 시간 정지 (경찰·경찰차·헬기·미사일 3초 정지 · 총알은 맞아요)
   function timeTick() { for (let n = 0; n < 2; n++) lgP(P.x + rnd(-8, 8), P.y + rnd(-8, 8), 8 + (P.z || 0) + rnd(0, 8), 0, 0, rnd(20, 60), { col: 0x7fe0ff, life: 0.5, sz: 1.5, grow: -0.7 }); }
-  function lgClock(x, y) {
+  function lgClock(x, y, th) {
+    const c1 = th ? th.r[0] : 0x7fe0ff, c2 = th ? th.r[2] : 0xffffff, c3 = th ? th.r[1] : 0xbff3ff;
     const g = new THREE.Group(), R = 300, mats = [], mk = (geo, col, op) => { const mt = lgMat(col, op); mats.push([mt, op]); return new THREE.Mesh(geo, mt); };
-    for (const [col, op, sc2] of [[0x7fe0ff, 0.8, R], [0xffffff, 0.5, R * 0.93]]) { const r = mk(lgGeo.ring, col, op); r.rotation.x = -Math.PI / 2; r.scale.setScalar(sc2); g.add(r); }
-    for (let i = 0; i < 12; i++) { const a = i / 12 * 6.283, t = mk(lgGeo.box, 0xbff3ff, 0.9); t.position.set(Math.cos(a) * R * 0.86, 0, Math.sin(a) * R * 0.86); t.scale.set(i % 3 === 0 ? 26 : 14, 2, 4); t.rotation.y = -a; g.add(t); }
+    for (const [col, op, sc2] of [[c1, 0.8, R], [c2, 0.5, R * 0.93]]) { const r = mk(lgGeo.ring, col, op); r.rotation.x = -Math.PI / 2; r.scale.setScalar(sc2); g.add(r); }
+    for (let i = 0; i < 12; i++) { const a = i / 12 * 6.283, t = mk(lgGeo.box, c3, 0.9); t.position.set(Math.cos(a) * R * 0.86, 0, Math.sin(a) * R * 0.86); t.scale.set(i % 3 === 0 ? 26 : 14, 2, 4); t.rotation.y = -a; g.add(t); }
     const hand = (len, th, col) => { const p = new THREE.Group(), h = mk(lgGeo.box, col, 0.95); h.scale.set(len, 2, th); h.position.x = len / 2; p.add(h); g.add(p); return p; };
-    const hm = hand(R * 0.78, 5, 0x7fe0ff), hh = hand(R * 0.5, 8, 0xffffff); g.position.set(x, 3, y);
+    const hm = hand(R * 0.78, 5, c1), hh = hand(R * 0.5, 8, c2); g.position.set(x, 3, y);
     lgAdd(3.0, [g], k => { g.scale.setScalar(0.3 + 0.7 * Math.min(1, k * 4)); const sp = 1 - Math.min(1, k * 1.5), ang = sp * sp * 20; hm.rotation.y = ang; hh.rotation.y = ang / 12 + 1; const f = k < 0.65 ? 1 : (1 - k) / 0.35; for (const [mt, op] of mats) mt.opacity = op * f; });
   }
-  function timeWarp(cx, cy) {
+  function timeWarp(cx, cy, th) {
     cx = cx === undefined ? P.x : cx; cy = cy === undefined ? P.y : cy;
     const n = performance.now(); if (n - lgTwT < 9000) return; lgTwT = n;
     const R = 480; let c = 0;
     for (const o of offs) if (Math.hypot(o.x - cx, o.y - cy) < R) { o.fz = 3; c++; }
     for (const car of cars) if (car.type === 'c' && car !== P.car && !car.disp && Math.hypot(car.x - cx, car.y - cy) < R) { car.stun = Math.max(car.stun || 0, 3); car.v *= 0.1; c++; }
-    lgFrz = 3; lgClock(cx, cy); lgRing(cx, cy, 0x7fe0ff, 20, 480, 1.1);
-    lgFlash('radial-gradient(circle at 50% 50%, rgba(120,200,255,0) 25%, rgba(30,70,150,.75) 100%)', 1, 3000);
+    lgFrz = 3; lgClock(cx, cy, th); lgRing(cx, cy, th ? th.r[0] : 0x7fe0ff, 20, 480, 1.1);
+    lgFlash('radial-gradient(circle at 50% 50%, rgba(120,200,255,0) 25%, ' + (th ? th.vg : 'rgba(30,70,150,.75)') + ' 100%)', 1, 3000);
     const S = lgS(); let sub = c ? c + '명 정지' : '';
     if (S.l_thunder) { const tg = lgTargets(cx, cy, R).slice(0, 10); for (const e of tg) { lgSkyBolt(e.x, e.y, 0x9fe6ff); lgHit(e.k, e.o, 70); } if (tg.length) sub += ' · 번개 ' + tg.length; }   // 🔗 정지된 심판
     if (S.l_midas && c) { money += 2000 * c; lgCoins(cx, cy, 14, Math.min(40, c * 5), 240); lgPop(cx, cy, 40, '+$' + (2000 * c).toLocaleString(), '#ffd23f', true); sub += ' · +$' + (2000 * c).toLocaleString(); }   // 🔗 시간 금화
@@ -2135,6 +2151,20 @@
       const f = lgFx[i]; f.t -= dt; f.upd(Math.min(1, 1 - f.t / f.T), dt);
       if (f.t <= 0) { for (const o of f.objs) { sc.remove(o); o.traverse(c => { if (c.material) c.material.dispose(); }); } lgFx.splice(i, 1); }
     }
+    if (lgWx) {   // v26.1: 합일 날씨 — 눈(영원한 겨울) · 불씨 · 스파크 · 금빛 가루 · 재 · 깃털 · 색종이
+      const q = lgWx; q.t -= dt; const kind = q.th.wx, n = lgLite() ? 1 : 3;
+      for (let i = 0; i < n && kind; i++) {
+        const px = q.x + rnd(-q.R, q.R), py = q.y + rnd(-q.R, q.R), pc = q.th.p[(Math.random() * 3) | 0];
+        if (kind === 'snow') lgP(px, py, rnd(180, 320), rnd(-14, 14), rnd(-14, 14), -rnd(45, 80), { col: 0xffffff, life: 4, sz: rnd(1.3, 2.6), op: 0.95 });
+        else if (kind === 'ember') lgP(px, py, rnd(0, 20), rnd(-20, 20), rnd(-20, 20), rnd(50, 110), { col: pc, life: 2.2, sz: rnd(1.2, 2.4), grow: -0.5 });
+        else if (kind === 'spark') lgP(px, py, rnd(8, 140), rnd(-160, 160), rnd(-160, 160), rnd(-40, 60), { col: pc, life: 0.28, sz: rnd(1, 2) });
+        else if (kind === 'mote') lgP(px, py, rnd(0, 40), rnd(-8, 8), rnd(-8, 8), rnd(25, 60), { col: pc, life: 2.6, sz: rnd(1.2, 2), grow: -0.4 });
+        else if (kind === 'ash') lgP(px, py, rnd(120, 260), rnd(-25, 25), rnd(-25, 25), -rnd(30, 60), { col: Math.random() < 0.3 ? 0xff8a30 : 0x9a9a9a, life: 3.4, sz: rnd(1.2, 2.2), op: 0.8 });
+        else if (kind === 'feather') lgP(px, py, rnd(160, 300), rnd(-30, 30), rnd(-30, 30), -rnd(25, 45), { col: pc, life: 4.6, sz: rnd(1.8, 3), op: 0.9, drag: 0.4 });
+        else if (kind === 'confetti') lgP(px, py, rnd(150, 300), rnd(-30, 30), rnd(-30, 30), -rnd(40, 70), { col: pc, life: 3.6, sz: rnd(1.4, 2.4) });
+      }
+      if (q.t <= 0) lgWx = null;
+    }
     if (lgRain) { lgRain.t -= dt; for (let n = 0; n < 2; n++) lgP(lgRain.x + rnd(-170, 170), lgRain.y + rnd(-170, 170), rnd(220, 320), 0, 0, -120, { col: 0xffc933, coin: true, life: 1.4, g: 300 }); if (lgRain.t <= 0) lgRain = null; }
     for (const w of wells) if (w.vd && w.S) {   // 🔗 폭풍의 눈 · 금화 소용돌이
       if (w.S.l_thunder) {
@@ -2149,21 +2179,24 @@
     }
     let S = { n: 0 }; try { if (P.onFoot && !activeInterior) S = lgS(); } catch (e) {}
     lgSNow = S; lgAuraT -= dt; const zz = (P.z || 0);
-    if (S.n && lgAuraT <= 0) {
+    const noAura = LG_LITE.has(wi) || scope;   // 시야를 가리지 않게
+    if (S.n && lgAuraT <= 0 && !noAura) {
       lgAuraT = 0.08; lgAN++;
       const cl = []; if (S.l_thunder) cl.push(S.l_midas ? 0xffe27a : 0x8fd8ff); if (S.l_midas) cl.push(0xffd23f); if (S.l_void) cl.push(0xc27bff); if (S.l_time) cl.push(0x7fe0ff);
+      if (S.n === 4) { const th = lgTh(wi); cl.length = 0; cl.push(th.p[0], th.p[1], th.p[2], th.r[0]); }
       if (S.l_thunder && lgAN % 2 === 0) { const a = rnd(0, 6.283), a2 = a + rnd(-1, 1), r2 = rnd(24, 38); lgSegs(lgPath([P.x + Math.cos(a) * 10, P.y + Math.sin(a) * 10, 4 + zz], [P.x + Math.cos(a2) * r2, P.y + Math.sin(a2) * r2, 4 + zz + rnd(0, 26)], 4, 5), S.l_midas ? 0xffe27a : 0x8fd8ff, 0.35, 0.13); }
       if (S.l_midas) lgP(P.x + rnd(-12, 12), P.y + rnd(-12, 12), zz + rnd(2, 16), 0, 0, rnd(25, 55), { col: 0xffd23f, life: 0.9, sz: 1.5, grow: -0.6 });
       if (S.l_void) lgP(0, 0, zz + rnd(2, 18), 0, 0, rnd(-6, 10), { col: Math.random() < 0.5 ? 0xc27bff : 0xff4df0, life: 0.75, sz: 1.6, orb: { cx: P.x, cy: P.y, ang: rnd(0, 6.283), rad: rnd(20, 28), av: 5.5, rv: -7 } });
       if (S.n >= 2) lgP(0, 0, zz + rnd(2, 26), 0, 0, rnd(10, 40), { col: cl[lgAN % cl.length], life: 1, sz: 2, orb: { cx: P.x, cy: P.y, ang: rnd(0, 6.283), rad: 36, av: 3.5, rv: -6 } });   // 🔗 합쳐진 오라: 겹친 인첸트 색이 나선으로 감겨요
       if (S.n === 4) for (let q = 0; q < 2; q++) lgP(P.x + rnd(-30, 30), P.y + rnd(-30, 30), zz + 1, 0, 0, rnd(70, 130), { col: cl[(lgAN + q) % 4], life: 1.1, sz: 2.2, grow: -0.5 });
     }
-    if (S.l_time) {
+    if (S.l_time && !noAura) {
       if (!lgTA) {
         lgTA = new THREE.Group(); const r1 = new THREE.Mesh(lgGeo.ring, lgMat(0x7fe0ff, 0.55)); r1.rotation.x = -Math.PI / 2; r1.scale.setScalar(26); lgTA.add(r1);
         for (let i = 0; i < 12; i++) { const a = i / 12 * 6.283, t = new THREE.Mesh(lgGeo.box, lgMat(0xbff3ff, 0.8)); t.position.set(Math.cos(a) * 30, 0, Math.sin(a) * 30); t.scale.set(i % 3 === 0 ? 7 : 4, 0.8, 1.2); t.rotation.y = -a; lgTA.add(t); }
         const hd = new THREE.Mesh(lgGeo.box, lgMat(0xffffff, 0.7)); hd.scale.set(24, 0.8, 1.4); hd.position.x = 12; lgTA.add(hd); sc.add(lgTA);
       }
+      if (S.n === 4) { const tk = LG_TH[wi] || 'void'; if (lgTA._tk !== tk) { lgTA._tk = tk; const th = lgTh(wi); lgTA.children.forEach((c, i) => c.material.color.setHex(i === 0 ? th.r[0] : th.r[2])); } }
       lgTA.visible = true; lgTA.position.set(P.x, zz + 1.5, P.y); lgTA.rotation.y = -T * 2.2; lgTA.scale.setScalar(S.n === 4 ? 1.7 : 1);
     } else if (lgTA) lgTA.visible = false;
   }
