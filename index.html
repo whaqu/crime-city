@@ -2391,7 +2391,7 @@
   // 1) 도시에는 순찰차(c.pat)가 도로를 돌아다녀요  2) 수배(★) 중인 나를 발견하면 무전으로 지원 요청 → 주변 순찰차가 합류, 부족한 인원은 멀리서 증원
   // 3) ★이 높을수록 경찰차 수 + 헬기 수가 늘고, 4★부터 군대(장갑차·탱크·공격헬기)  4) 강도를 하면 경보가 울려서 바로 출동해요
   let seenT = -99, called = false, patT = 0, heliMsg = 0; const hms = [], hmM = new THREE.MeshBasicMaterial({ color: 0xff7a1a });
-  const wantCars = st => (MP.raid() ? [0, 2, 3, 5, 7, 9] : [0, 1, 1, 3, 4, 6])[st] | 0, wantHeli = st => (MP.raid() ? [0, 0, 0, 1, 2, 3] : [0, 0, 0, 0, 1, 2])[st] | 0;   // v25: 일반 모드는 경찰차·헬기 수를 줄이고 헬기는 4★부터
+  const wantCars = st => (MP.raid() ? [0, 2, 3, 5, 7, 9] : [0, 1, 1, 3, 4, 6])[st] | 0, wantHeli = st => (MP.raid() ? [0, 0, 0, 1, 2, 3] : [0, 0, 0, 0, 0, 1])[st] | 0;   // v25: 일반 모드는 경찰차·헬기 수를 줄이고 헬기는 4★부터
   function spawnPatrol() {
     const tg = P.onFoot ? P : (P.car || P);
     for (let n = 0; n < 30; n++) {
@@ -2613,17 +2613,17 @@
     }
 
     // 🚁 경찰 헬기 공중 요격: 레이드나 3★ 이상에서 헬기가 공중의 나(제트팩·헬기 포함)를 미사일로 조준해요
-    for (const c of cars) if (c.type === 'c' && !c.pat && c.kind === 'heli' && !(c.stun > 0) && (MP.raid() || stars >= 3)) {
-      c.mcd = (c.mcd === undefined ? rnd(1.5, 3) : c.mcd) - dt; const dx = tg.x - c.x, dy = tg.y - c.y, dz = (tg.z || 0) + 8 - (c.z || 30), d = Math.hypot(dx, dy);
-      if (c.mcd <= 0 && d < 650 && d > 90) {
-        c.mcd = MP.raid() ? rnd(2.2, 3.4) : rnd(3.5, 5); const L = Math.hypot(d, dz) || 1, m = new THREE.Mesh(bulG, hmM); m.scale.setScalar(1.5); sc.add(m);
-        hms.push({ m, x: c.x, y: c.y, z: c.z || 30, vx: dx / L * 390, vy: dy / L * 390, vz: dz / L * 390, t: 2.3 }); playSound('shoot');
+    for (const c of cars) if (c.type === 'c' && !c.pat && c.kind === 'heli' && !(c.stun > 0) && (MP.raid() || stars >= 4)) {   // v25: 일반 모드 헬기 미사일은 4★부터
+      c.mcd = (c.mcd === undefined ? (MP.raid() ? rnd(1.5, 3) : rnd(4, 7)) : c.mcd) - dt; const dx = tg.x - c.x, dy = tg.y - c.y, dz = (tg.z || 0) + 8 - (c.z || 30), d = Math.hypot(dx, dy);
+      if (c.mcd <= 0 && d < (MP.raid() ? 650 : 520) && d > 90) {
+        c.mcd = MP.raid() ? rnd(2.2, 3.4) : rnd(7, 10); const L = Math.hypot(d, dz) || 1, m = new THREE.Mesh(bulG, hmM); m.scale.setScalar(1.5); sc.add(m);
+        hms.push({ m, x: c.x, y: c.y, z: c.z || 30, vx: dx / L * (MP.raid() ? 390 : 250), vy: dy / L * (MP.raid() ? 390 : 250), vz: dz / L * (MP.raid() ? 390 : 250), t: MP.raid() ? 2.3 : 2.8 }); playSound('shoot');
       }
     }
     for (let i = hms.length - 1; i >= 0; i--) {
       const q = hms[i], qf = lgFrz > 0 ? 0.04 : 1; q.t -= dt * (lgFrz > 0 ? 0.1 : 1); q.x += q.vx * dt * qf; q.y += q.vy * dt * qf; q.z += q.vz * dt * qf; let dead = q.t <= 0 || q.z < 1 || (q.z < bh(q.x, q.y));
-      if (!dead && Math.hypot(tg.x - q.x, tg.y - q.y) < 26 && Math.abs((tg.z || 0) + 8 - q.z) < 26) {
-        dead = true; if (!MP.god()) { shake = 12; msg('🚁 헬기 미사일 직격!'); if (P.onFoot) { tased = Math.max(tased, 1.4); bust = Math.min(1.69, bust + 0.5); } else if (P.car) P.car.hp -= 30 * (P.car.arm ? 1 / P.car.arm : 1); } playSound('boom');
+      if (!dead && Math.hypot(tg.x - q.x, tg.y - q.y) < (MP.raid() ? 26 : 20) && Math.abs((tg.z || 0) + 8 - q.z) < (MP.raid() ? 26 : 20)) {
+        dead = true; if (!MP.god()) { shake = 12; msg('🚁 헬기 미사일 직격!'); if (P.onFoot) { tased = Math.max(tased, MP.raid() ? 1.4 : 0.8); bust = Math.min(1.69, bust + (MP.raid() ? 0.5 : 0.25)); } else if (P.car) P.car.hp -= (MP.raid() ? 30 : 15) * (P.car.arm ? 1 / P.car.arm : 1); } playSound('boom');
       }
       q.m.position.set(q.x, q.z, q.y); if (dead) { sc.remove(q.m); hms.splice(i, 1); }
     }
@@ -2711,7 +2711,7 @@
     if (baseP && !baseSeen && Math.hypot(tg.x - baseP.x, tg.y - baseP.y) < 300) { baseSeen = 1; msg('군사기지 발견! 탱크·장갑차에 탈 수 있어요'); }
     for (const o of offs) if (o.dead <= 0 && (tg.z || 0) < 20 && Math.hypot(o.x - tg.x, o.y - tg.y) < 27) near = true;
     let airLock = false;   // 경찰 헬기가 가까이 오면 공중(제트팩)에서도 조준을 당해 체포 게이지가 차올라요
-    if (MP.raid() || stars >= 3) for (const c of cars) if (c.type === 'c' && !c.pat && c.kind === 'heli' && Math.hypot(c.x - tg.x, c.y - tg.y) < 130) { airLock = true; break; }
+    if (MP.raid() || stars >= 4) for (const c of cars) if (c.type === 'c' && !c.pat && c.kind === 'heli' && Math.hypot(c.x - tg.x, c.y - tg.y) < (MP.raid() ? 130 : 95)) { airLock = true; break; }
 
     if (tased > 0 && stars > 0) bust = Math.min(1.69, bust + dt * 0.5);
     if (near && sp < 100 && stars > 0) bust += dt * (MP.raid() ? 1.3 : 0.9); else if (airLock && stars > 0) bust += dt * (MP.raid() ? 0.7 : 0.5); else bust = Math.max(0, bust - dt * (MP.raid() ? 1.5 : 2.2));   // v25: 일반 모드 체포 게이지는 느리게 차고 빨리 빠져요
@@ -3364,7 +3364,7 @@
       if (!sb) return { ok: false, err: 'net' };
       try { const { data, error } = await sb.rpc(fn, args); if (error || !data || typeof data !== 'object') return { ok: false, err: 'net' }; return data; } catch (e) { return { ok: false, err: 'net' }; }
     }
-    let nameBusy = false, relogging = false;
+    let nameBusy = false, relogging = false, fleeOK = false;   // fleeOK: 게임이 스스로 새로고침할 때(로그아웃 등)는 도주 벌금 제외
     const sleep = ms => new Promise(r => setTimeout(r, ms));
     function showAuthUI() {
       $('mpAuthOut').style.display = guest ? '' : 'none'; $('mpAuthIn').style.display = guest ? 'none' : '';
@@ -3372,7 +3372,7 @@
     }
     function setSession(n, tok) { guest = false; myName = n; myToken = tok; LS.set('cc_name', n); LS.set('cc_token', tok); LS.set('cc_hint', ''); }
     function dropLocal(hint) { for (const k of ['cc_name', 'cc_token', 'cc_money', 'cc_own']) { try { localStorage.removeItem(k); } catch (e) {} } LS.set('cc_hint', hint || ''); }
-    function forceRelogin(why) { if (relogging) return; relogging = true; profReady = false; dropLocal(myName); msg(why); addFeed('🔑 ' + why, '#f66'); setTimeout(() => location.reload(), 2500); }
+    function forceRelogin(why) { if (relogging) return; relogging = true; profReady = false; dropLocal(myName); msg(why); addFeed('🔑 ' + why, '#f66'); setTimeout(() => { fleeOK = true; location.reload(); }, 2500); }
     const readCreds = () => ({ n: $('mpUser').value.trim().slice(0, 12), p: $('mpPw').value });
     async function doLogin() {
       const { n, p } = readCreds();
@@ -3418,7 +3418,7 @@
         await saveProfile(true); for (let i = 0; i < 40 && profBusy; i++) await sleep(50);
         profReady = false;
         try { await sb.rpc('cc_logout', { p_token: myToken }); } catch (e) {}
-        dropLocal(myName); location.reload();
+        dropLocal(myName); fleeOK = true; location.reload();
       } finally { nameBusy = false; }
     }
     async function doRename() {
@@ -4147,6 +4147,13 @@
           const nw = Object.keys(own).filter(k => +k >= 6 && own[k]).length;
           addFeed(`💾 ${nm} 저장 불러옴 · $${Math.round(money).toLocaleString()}${nw ? ' · 특수무기 ' + nw + '개' : ''}`, '#7fd');
           profSig = JSON.stringify([Math.round(money), own]); profReady = true;
+          try {   // v25: 수배 중에 새로고침/창 닫기로 도망쳤다면 체포된 걸로 벌금 (15분 안에 다시 들어왔을 때만, 한 번만)
+            const ft = +localStorage.getItem('cc_flee') || 0; localStorage.removeItem('cc_flee');
+            if (ft && Date.now() - ft < 15 * 60 * 1000) {
+              const loss = Math.floor(money * (own.vest ? 0.15 : 0.3));
+              if (loss > 0) { money -= loss; title('🚔 도주 실패 · 체포됨!', `수배 중에 새로고침해서 벌금 -$${loss.toLocaleString()}`, '#7fb6ff'); addFeed(`🚔 수배 중 새로고침 → 체포 처리 · 벌금 -$${loss.toLocaleString()}`, '#7fb6ff'); }
+            }
+          } catch (e) {}
         } else { profReady = true; await saveProfile(true); addFeed(`💾 ${nm} 새 저장 만듦 (다른 기기에서도 이 닉네임이면 이어짐)`, '#7fd'); }
       } catch (e) {}
     }
@@ -4214,7 +4221,7 @@
       if (c.t === 'msg') { title('📩 관리자 메시지', String(c.text || '').slice(0, 120), '#ffd23f'); addFeed('📩 관리자: ' + String(c.text || '').slice(0, 120), '#ffd23f'); playSound('cash'); }
       else if (c.t === 'room') { const k = String(c.code || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6); if (k.length >= 4) { addFeed('📩 관리자가 방 ' + k + ' (으)로 이동시켰어요', '#ffd23f'); go(k); } }
       else if (c.t === 'home' || c.t === 'kick') { title(c.t === 'kick' ? '🚪 관리자가 내보냈어요' : '🏠 관리자가 내 방으로 보냈어요', String(c.text || '').slice(0, 120), '#ff8a5a'); go(myCode); }
-      else if (c.t === 'reload') { location.reload(); }
+      else if (c.t === 'reload') { fleeOK = true; location.reload(); }
     }
     async function pingOnce() {
       if (!sb || banned || devOpen) return;
@@ -4247,7 +4254,11 @@
     }, true);
     document.addEventListener('contextmenu', e => e.preventDefault());
     document.addEventListener('visibilitychange', () => { if (document.hidden) saveProfile(true); });
-    window.addEventListener('pagehide', () => saveProfile(true));
+    window.addEventListener('pagehide', () => {
+      // v25: 일반 모드에서 수배(★) 중에 새로고침·창 닫기로 도망치면 '체포'로 쳐요 → 다음에 들어올 때 벌금
+      try { if (!guest && !raid && !hall && !fleeOK && heat > 0 && !(typeof god !== 'undefined' && god > 0)) localStorage.setItem('cc_flee', String(Date.now())); } catch (e) {}
+      saveProfile(true);
+    });
 
     // ---------------------------------------------------------------- 매 프레임
     let saveT = 0, hbT = 0;
