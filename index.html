@@ -4147,13 +4147,7 @@
           const nw = Object.keys(own).filter(k => +k >= 6 && own[k]).length;
           addFeed(`💾 ${nm} 저장 불러옴 · $${Math.round(money).toLocaleString()}${nw ? ' · 특수무기 ' + nw + '개' : ''}`, '#7fd');
           profSig = JSON.stringify([Math.round(money), own]); profReady = true;
-          try {   // v25: 수배 중에 새로고침/창 닫기로 도망쳤다면 체포된 걸로 벌금 (15분 안에 다시 들어왔을 때만, 한 번만)
-            const ft = +localStorage.getItem('cc_flee') || 0; localStorage.removeItem('cc_flee');
-            if (ft && Date.now() - ft < 15 * 60 * 1000) {
-              const loss = Math.floor(money * (own.vest ? 0.15 : 0.3));
-              if (loss > 0) { money -= loss; title('🚔 도주 실패 · 체포됨!', `수배 중에 새로고침해서 벌금 -$${loss.toLocaleString()}`, '#7fb6ff'); addFeed(`🚔 수배 중 새로고침 → 체포 처리 · 벌금 -$${loss.toLocaleString()}`, '#7fb6ff'); }
-            }
-          } catch (e) {}
+          try { localStorage.removeItem('cc_flee'); } catch (e) {}   // 예전 도주 벌금 표시 정리 (새로고침 벌금 없음)
         } else { profReady = true; await saveProfile(true); addFeed(`💾 ${nm} 새 저장 만듦 (다른 기기에서도 이 닉네임이면 이어짐)`, '#7fd'); }
       } catch (e) {}
     }
@@ -4255,8 +4249,6 @@
     document.addEventListener('contextmenu', e => e.preventDefault());
     document.addEventListener('visibilitychange', () => { if (document.hidden) saveProfile(true); });
     window.addEventListener('pagehide', () => {
-      // v25: 일반 모드에서 수배(★) 중에 새로고침·창 닫기로 도망치면 '체포'로 쳐요 → 다음에 들어올 때 벌금
-      try { if (!guest && !raid && !hall && !fleeOK && heat > 0 && !(typeof god !== 'undefined' && god > 0)) localStorage.setItem('cc_flee', String(Date.now())); } catch (e) {}
       saveProfile(true);
     });
 
