@@ -150,6 +150,7 @@
     <div class="card hide" id="aEd">
       <div class="row" style="margin-bottom:6px"><b id="aTitle" style="font-size:16px"></b><span class="sub" id="aSeq" style="margin:0"></span></div>
       <div class="row" id="aCtl" style="margin:6px 0 10px"><span class="lbl" id="aOn" style="min-width:90px"></span><button id="cMsg">📩 메시지</button><button id="cHome">🏠 내 방으로</button><button id="cKick">🚪 내보내기</button><button id="cRoom">➡️ 방 이동</button><button id="cBan" class="bad">🚫 차단</button><button id="cUnban">차단 해제</button></div>
+      <div class="row" id="aPwRow" style="margin:0 0 10px"><span class="lbl" id="aPwInfo" style="min-width:230px"></span><input id="aPwNew" type="text" maxlength="64" placeholder="새 비밀번호 (4자 이상)" autocomplete="off" style="width:210px"><button class="pri" id="aPwSet">🔑 비밀번호 설정/초기화</button><button id="aPwOut">모든 기기 로그아웃</button></div>
       <div class="sub">저장하면 열었을 때의 값으로 통째로 덮어써요(접속 중이면 2초 안에 그 사람 화면에 반영). 그 사이 번 돈은 사라질 수 있으니 열자마자 수정하는 걸 추천해요.</div>
       <div class="grid2">
         <div><div class="lbl">이름 변경</div><div class="row"><input id="aName" maxlength="24" style="flex:1"><button id="aRen">이름 변경</button></div></div>
@@ -306,7 +307,7 @@ async function openAcct(name) {
     if (!r) { toast('계정을 찾을 수 없어요', 0); return loadAccts(); }
     selName = r.name; aOwn = normOwn(r.own);
     paintOn(); $('aEd').classList.remove('hide'); $('aTitle').textContent = '👤 ' + r.name; $('aSeq').textContent = '  · 관리자 수정 ' + (r.adm_seq || 0) + '회';
-    $('aName').value = r.name; $('aMoney').value = r.money; renderEd(); renderAccts();
+    $('aName').value = r.name; $('aMoney').value = r.money; renderEd(); renderAccts(); loadPwInfo();
   } catch (e) { toast('불러오기 실패: ' + e.message, 0); }
 }
 function chip(on, labelText, extra) {
@@ -457,6 +458,24 @@ $('aZero').onclick = async () => {
   try { const k = await rpc('cc_admin_delete_zero', { pw }); toast(k + '개 삭제했어요', 1); selName = null; $('aEd').classList.add('hide'); await loadAccts(); } catch (e) { toast('실패: ' + e.message, 0); }
 };
 $('aq').oninput = renderAccts; $('aReload').onclick = loadAccts;
+
+// ---- 비밀번호 (v24): 설정·초기화(= 새 비밀번호로 덮어쓰기) · 강제 로그아웃. 비밀번호를 '없애는' 기능은 일부러 없어요(없애면 아무나 그 계정을 가져가요)
+async function loadPwInfo() {
+  const el = $('aPwInfo'); el.textContent = '🔑 확인 중…'; if (!selName) return;
+  try { const r = await rpc('cc_admin_pwinfo', { pw, target: selName }); el.textContent = '🔑 ' + (r && r.has_pw ? '비밀번호 있음' : '비밀번호 없음 · 먼저 걸어 두세요') + ' · 로그인된 기기 ' + ((r && r.sessions) || 0) + '곳'; }
+  catch (e) { el.textContent = '🔑 비밀번호 상태를 못 읽었어요 (v24 DB 적용 필요)'; }
+}
+$('aPwSet').onclick = async () => {
+  if (!selName) return; const v = $('aPwNew').value;
+  if (!v || v.length < 4 || v.length > 64) return toast('새 비밀번호는 4~64자로 입력하세요', 0);
+  if (!confirm(selName + ' 계정의 비밀번호를 바꿀까요?\n(그 계정으로 로그인돼 있던 모든 기기가 로그아웃돼요)')) return;
+  try { const n = await rpc('cc_admin_set_password', { pw, target: selName, new_pw: v }); if (!n) return toast('계정을 찾을 수 없어요', 0); $('aPwNew').value = ''; toast(selName + ' 비밀번호를 바꿨어요 · 본인에게 새 비밀번호를 알려주세요', 1); loadPwInfo(); }
+  catch (e) { toast('실패: ' + e.message, 0); }
+};
+$('aPwOut').onclick = async () => {
+  if (!selName) return; if (!confirm(selName + ' 계정이 로그인된 모든 기기를 로그아웃시킬까요?')) return;
+  try { const n = await rpc('cc_admin_logout', { pw, target: selName }); toast(n + '곳 로그아웃시켰어요', 1); loadPwInfo(); } catch (e) { toast('실패: ' + e.message, 0); }
+};
 
 // ---- 탭
 let curTab = 4;
