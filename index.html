@@ -1832,7 +1832,7 @@
     { k: ['l_midas', 'l_time'], ic: '⏳', n: '시간 금화', d: '시간 정지가 걸릴 때 멈춘 적 한 명당 +$2,000' },
     { k: ['l_void', 'l_time'], ic: '🕳️', n: '시간의 구멍', d: '시간 정지 중에는 균열의 범위 +35% · 흡입력 2.2배' }
   ];
-  const LG_ALL = { k: ['l_thunder', 'l_midas', 'l_void', 'l_time'], ic: '👑', n: '레전드 합일', d: '4개를 전부 겹치면 쏠 때마다 100% 합일 폭격(타이틀 “시공 붕괴”): 4색 충격파 · 금빛 번개 3줄기 · 시계 · 금화 비 · 대폭발 + 균열 + 시간 정지 + $20,000' };
+  const LG_ALL = { k: ['l_thunder', 'l_midas', 'l_void', 'l_time'], ic: '👑', n: '레전드 합일', d: '4개를 전부 겹치면 쏠 때마다 100% 합일 폭격 — 무기마다 타이틀·색·공격 방식이 달라요 (25종) · 공통: 공허 균열 + 시간 정지 + $20,000' };
   function lgS() { let S = {}; try { S = MP.lgSet(); } catch (e) {} S.n = (S.l_thunder ? 1 : 0) + (S.l_midas ? 1 : 0) + (S.l_void ? 1 : 0) + (S.l_time ? 1 : 0); return S; }
   function lgSynNames(S) { const a = LG_SYN.filter(y => y.k.every(id => S[id])).map(y => y.ic + y.n); if (LG_ALL.k.every(id => S[id])) a.push(LG_ALL.ic + LG_ALL.n); return a; }
   function lgTargets(x, y, R) {
@@ -1857,23 +1857,157 @@
   function lgDelay(sec, fn) { let done = false; lgAdd(sec, [], k => { if (k >= 1 && !done) { done = true; fn(); } }); }
   // 🔗 레전드 합일: 4개를 전부 겹친 무기의 4번째 발사마다 → ① 타이틀 + 충전(4색이 한 점으로 모임) ② 0.45초 뒤 합쳐진 공격
   const LG_FU = ['천지개벽', '시공 붕괴', '종말의 심판', '신화 강림'];
-  function lgConverge(x, y) {
-    const nm = '시공 붕괴', cols = [0x8fd8ff, 0xffd23f, 0xc27bff, 0x7fe0ff];
-    lgFuBanner('👑 ' + nm, '⚡ 뇌신 · 💰 미다스 · 🌌 공허 · ⏳ 시간 지배 — 레전드 합일');
+  // v25.3: 레전드 합일은 무기마다 달라요 — 타이틀 · 4색 · 공격 방식(st)이 무기별로 다름
+  const LG_FUW = {
+    0:  { nm: '처형의 6연발', c: [0xfff2a0, 0xffd23f, 0xffa030, 0xffffff], st: 'spiral', n: 6, R: 150, d: 0.14, br: 80, bd: 140 },
+    1:  { nm: '탄환의 폭풍', c: [0xffd060, 0xff9a30, 0xfff2a0, 0xffffff], st: 'spiral', n: 18, R: 210, d: 0.05, br: 45, bd: 60 },
+    2:  { nm: '산산이 흩어져라', c: [0xffa040, 0xff6a20, 0xffd060, 0xffffff], st: 'cone', n: 8, R: 75, br: 55, bd: 110 },
+    3:  { nm: '천공 미사일', c: [0xff5522, 0xff9a30, 0xffd060, 0xffffff], st: 'drop', n: 6, R: 190, d: 0.16, br: 110, bd: 220, tall: 16 },
+    4:  { nm: '정지의 심판', c: [0x66ccff, 0xbff3ff, 0xffffff, 0x3a8cff], st: 'pulse', n: 3, d: 0.35, R: 380, dmg: 40, fz: 5 },
+    5:  { nm: '일격필살', c: [0xffffff, 0xff4040, 0xffd23f, 0xffa0a0], st: 'line', ang: [0], wd: 34, dmg: 900, th: 4, len: 1100, br: 240, bd: 600 },
+    6:  { nm: '무한 탄막', c: [0xff5a3c, 0xffa030, 0xfff2a0, 0xffffff], st: 'spiral', n: 30, R: 240, d: 0.035, br: 38, bd: 45 },
+    7:  { nm: '차원 관통', c: [0xb06bff, 0xe0c8ff, 0xffffff, 0x7a3cff], st: 'line', ang: [0], wd: 60, dmg: 700, th: 6, len: 1400, br: 160, bd: 300 },
+    8:  { nm: '미사일 대공습', c: [0xff2e88, 0xff9ac8, 0xffd060, 0xffffff], st: 'drop', n: 14, R: 240, d: 0.08, br: 70, bd: 120, tall: 12 },
+    9:  { nm: '업화의 용', c: [0xff7a1a, 0xffc040, 0xff3a10, 0xfff2a0], st: 'fire', n: 8, R: 130, t: 6, br: 90, bd: 150 },
+    10: { nm: '플라즈마 폭주', c: [0x3dffb0, 0xbfffe8, 0xffffff, 0x10c080], st: 'pulse', n: 5, d: 0.22, R: 300, dmg: 70, fz: 0 },
+    11: { nm: '연쇄 파편', c: [0xb8ff3c, 0xe8ff9a, 0xffd060, 0xffffff], st: 'drop', n: 8, R: 200, d: 0.12, br: 80, bd: 130, tall: 10, cl: 3 },
+    12: { nm: '천공의 화살비', c: [0xd8b98a, 0xfff2d0, 0xffd23f, 0xffffff], st: 'line', ang: [-0.22, 0, 0.22], wd: 30, dmg: 450, th: 2.5, len: 1000, br: 110, bd: 200 },
+    13: { nm: '광자 처형', c: [0xff2e5a, 0xff9ab0, 0xffffff, 0xff0040], st: 'line', ang: [-0.6, -0.2, 0.2, 0.6], wd: 26, dmg: 380, th: 2, len: 900, br: 90, bd: 150 },
+    14: { nm: '뇌신 강림', c: [0x7ad7ff, 0xffffff, 0xfff2a0, 0x3a8cff], st: 'storm', n: 8, R: 330 },
+    15: { nm: '죽음의 회전', c: [0xd0d6dd, 0xffffff, 0xff4040, 0x9aa4b0], st: 'pulse', n: 8, d: 0.14, R: 270, dmg: 45, fz: 0, spin: 1 },
+    16: { nm: '특이점 붕괴', c: [0x8a3cff, 0xff4df0, 0x6fd8ff, 0x000000], st: 'hole', R: 420 },
+    17: { nm: '불바다 지옥', c: [0xff8a2a, 0xffc040, 0xff3a10, 0xfff2a0], st: 'fire', n: 14, R: 230, t: 6, br: 70, bd: 110 },
+    18: { nm: '차원 이동 충격', c: [0x3dffe0, 0xbffff4, 0xffffff, 0x10b0a0], st: 'tp', n: 3, R: 320, dmg: 80 },
+    19: { nm: '연쇄 폭탄', c: [0xff3355, 0xff9ab0, 0xffd060, 0xffffff], st: 'drop', n: 10, R: 220, d: 0.2, br: 90, bd: 150, tall: 8, cl: 2 },
+    20: { nm: '신의 철퇴', c: [0xffd23f, 0xfff2a0, 0xffffff, 0xffa800], st: 'cross', R: 110, br: 120, bd: 260 },
+    21: { nm: '운석 낙하', c: [0xff8a3c, 0xffc040, 0xff3a10, 0xfff2a0], st: 'drop', n: 10, R: 260, d: 0.13, br: 100, bd: 190, tall: 20 },
+    22: { nm: '태양 강림', c: [0xffe27a, 0xffffff, 0xffd23f, 0xff9a30], st: 'sun', R: 360 },
+    23: { nm: '영원한 겨울', c: [0x8fe8ff, 0xffffff, 0x4aa8ff, 0xd8f8ff], st: 'pulse', n: 4, d: 0.3, R: 440, dmg: 60, fz: 6, ice: 1 },
+    24: { nm: '천검 낙하', c: [0xe6dcff, 0xb9a6ff, 0xffffff, 0x7a5cff], st: 'swords', n: 12, R: 210, br: 90, bd: 170 }
+  };
+  const LG_FUW_DEF = { nm: '시공 붕괴', c: [0x8fd8ff, 0xffd23f, 0xc27bff, 0x7fe0ff], st: 'classic' };
+  function lgFuHit(x, y, R, dmg, fz) {   // 범위 안 전부에게 피해(+동결)
+    for (const e of lgTargets(x, y, R)) { lgHit(e.k, e.o, dmg); if (fz) { if (e.k === 'o') e.o.fz = Math.max(e.o.fz || 0, fz); else if (e.k === 'c' && cars.includes(e.o)) { e.o.stun = Math.max(e.o.stun || 0, fz); e.o.v *= 0.05; } } }
+  }
+  const LGF = {
+    classic(x, y, W) {
+      const cols = W.c;
+      lgSkyBolt(x, y, 0xffffff); lgSkyBolt(x + 34, y - 22, 0xffd23f); lgSkyBolt(x - 34, y + 22, 0xc27bff);
+      cols.forEach((c, i) => lgRing(x, y, c, 10, 190 + i * 80, 0.8 + i * 0.15, 3 + i * 1.6, 0.85));
+      lgColumn(x, y, 0xffffff, 16, 720, 1.0, 0.55); lgColumn(x, y, 0xffd23f, 28, 720, 1.3, 0.28); lgColumn(x, y, 0xc27bff, 40, 720, 1.6, 0.2);
+      lgClock(x, y); lgCoins(x, y, 10, 46, 260); lgRain = { x, y, t: 1.4 }; thunderChain(x, y);
+    },
+    spiral(x, y, W) {   // 권총·기관단총·미니건: 나선으로 연속 폭발
+      lgRing(x, y, W.c[0], 10, W.R * 1.3, 0.5, 3);
+      for (let i = 0; i < W.n; i++) lgDelay(0.08 + i * W.d, () => {
+        const a = i * 2.4, r = W.R * (i + 1) / W.n, px = x + Math.cos(a) * r, py = y + Math.sin(a) * r, c = W.c[i % 4];
+        boom(px, py, W.br, W.bd); lgRing(px, py, c, 5, W.br * 1.1, 0.35); lgSpark(px, py, 8, c, 4); lgColumn(px, py, c, 5, 160, 0.3, 0.6);
+      });
+    },
+    cone(x, y, W) {   // 산탄총: 동심원 3겹으로 한꺼번에 터짐
+      for (let j = 0; j < 3; j++) lgDelay(0.05 + j * 0.16, () => {
+        const r = W.R * (j + 1); lgRing(x, y, W.c[j % 4], 10, r + 40, 0.5, 3 + j);
+        for (let k = 0; k < W.n + j * 2; k++) { const a = k / (W.n + j * 2) * 6.283 + j * 0.4, px = x + Math.cos(a) * r, py = y + Math.sin(a) * r; boom(px, py, W.br, W.bd); lgSpark(px, py, 8, W.c[(k + j) % 4], 3); }
+        shake = Math.max(shake, 10);
+      });
+    },
+    drop(x, y, W) {   // 로켓·멀티로켓·유탄·끈끈이·유성포: 하늘에서 줄줄이 낙하
+      for (let i = 0; i < W.n; i++) lgDelay(0.08 + i * W.d, () => {
+        const a = rnd(0, 6.283), r = Math.sqrt(Math.random()) * W.R, px = x + Math.cos(a) * r, py = y + Math.sin(a) * r, c = W.c[i % 4];
+        lgColumn(px, py, c, W.tall || 10, 640, 0.25, 0.7); lgDelay(0.22, () => {
+          boom(px, py, W.br, W.bd); lgRing(px, py, c, 6, W.br * 1.2, 0.5); lgSpark(px, py, 10, c, 8);
+          if (W.cl) for (let q = 0; q < W.cl; q++) { const aa = q / W.cl * 6.283 + rnd(0, 1); lgDelay(0.18, () => boom(px + Math.cos(aa) * 55, py + Math.sin(aa) * 55, 45, 60)); }
+        });
+      });
+    },
+    pulse(x, y, W) {   // 스턴건·플라즈마·회전톱·절대영도: 퍼져 나가는 충격파
+      for (let j = 0; j < W.n; j++) lgDelay(0.05 + j * W.d, () => {
+        lgRing(x, y, W.c[j % 4], 10, W.R, 0.6, 3 + j); lgRing(x, y, W.c[(j + 1) % 4], 10, W.R * 0.8, 0.8, 2 + j, 0.6);
+        lgFuHit(x, y, W.R, W.dmg, W.fz); shake = Math.max(shake, 7);
+        const n = W.spin ? 16 : 8; for (let k = 0; k < n; k++) { const a = k / n * 6.283 + j * 0.5, r = W.R * 0.7; lgP(x, y, 8, Math.cos(a) * r, Math.sin(a) * r, rnd(20, 90), { col: W.c[k % 4], life: 0.6, sz: W.spin ? 2.6 : 1.8, g: 120 }); }
+        if (W.ice) for (let k = 0; k < 8; k++) { const a = k / 8 * 6.283 + j, r = W.R * (0.3 + 0.6 * Math.random()), m = new THREE.Mesh(new THREE.ConeGeometry(8, 1, 5), lgMat(W.c[k % 4], 0.8)); m.position.set(x + Math.cos(a) * r, 0, y + Math.sin(a) * r); const h = 50 + k * 8; lgAdd(1.0, [m], q => { const g = Math.min(1, q * 6); m.scale.y = h * g; m.position.y = h * g / 2; m.material.opacity = q < 0.7 ? 0.8 : 0.8 * (1 - q) * 3.3; }); }
+      });
+      lgDelay(0.1 + W.n * W.d, () => { boom(x, y, W.R * 0.6, 260); lgFlash('rgba(235,250,255,1)', 0.5, 400, true); });
+    },
+    line(x, y, W) {   // 저격총·레일건·석궁·레이저: 일직선 관통 (끝에서 폭발)
+      const base = Math.hypot(x - P.x, y - P.y) < 8 ? P.a : Math.atan2(y - P.y, x - P.x);
+      for (const off of W.ang) {
+        const a = base + off, cs = Math.cos(a), sn = Math.sin(a), ex = P.x + cs * W.len, ey = P.y + sn * W.len;
+        lgSegs(lgPath([P.x, P.y, 14], [ex, ey, 14], 12, 4), W.c[0], W.th, 0.6); lgSegs(lgPath([P.x, P.y, 14], [ex, ey, 14], 12, 0), 0xffffff, W.th * 0.5, 0.45);
+        lgDelay(0.1, () => {
+          for (const e of lgTargets(P.x + cs * W.len / 2, P.y + sn * W.len / 2, W.len / 2 + 40)) {
+            const t = (e.x - P.x) * cs + (e.y - P.y) * sn, pe = Math.abs(-(e.x - P.x) * sn + (e.y - P.y) * cs);
+            if (t > 0 && t < W.len && pe < W.wd) { lgHit(e.k, e.o, W.dmg); lgSpark(e.x, e.y, 10, W.c[1], 6); }
+          }
+          if (W.ang.length > 1 || off === 0) { boom(x + (off ? cs * 40 : 0), y + (off ? sn * 40 : 0), W.br, W.bd); }
+          lgColumn(ex, ey, W.c[1], 12, 500, 0.5, 0.6);
+        });
+      }
+      lgRing(x, y, W.c[1], 10, W.br * 1.5, 0.7); lgColumn(x, y, W.c[0], 18, 720, 0.8, 0.6);
+    },
+    fire(x, y, W) {   // 화염방사기·네이팜: 불바다
+      napAdd(x, y, W.t);
+      for (let i = 0; i < W.n; i++) lgDelay(0.05 + i * 0.07, () => {
+        const a = i / W.n * 6.283 + rnd(0, 0.4), r = W.R * (0.5 + 0.5 * ((i * 7) % 5) / 4), px = x + Math.cos(a) * r, py = y + Math.sin(a) * r;
+        napAdd(px, py, W.t); lgRing(px, py, W.c[i % 4], 5, 80, 0.5); lgColumn(px, py, W.c[i % 4], 14, 300, 0.6, 0.5);
+        if (i % 3 === 0) boom(px, py, W.br, W.bd);
+      });
+    },
+    storm(x, y, W) {   // 번개총: 번개 폭풍
+      for (let i = 0; i < W.n; i++) lgDelay(0.05 + i * 0.1, () => {
+        const a = rnd(0, 6.283), r = Math.sqrt(Math.random()) * W.R, px = x + Math.cos(a) * r, py = y + Math.sin(a) * r;
+        lgSkyBolt(px, py, W.c[i % 4]); lgRing(px, py, W.c[i % 4], 6, 90, 0.4); boom(px, py, 70, 110); thunderChain(px, py); shake = Math.max(shake, 6);
+      });
+    },
+    hole(x, y, W) {   // 블랙홀 건: 균열 3개 + 안으로 모이는 충격파
+      voidAdd(x + 120, y, 6); voidAdd(x - 120, y, 6);
+      for (let j = 0; j < 4; j++) lgDelay(j * 0.2, () => { lgRing(x, y, W.c[j % 4], W.R - j * 60, 10, 0.5, 3 + j, 0.8); });
+      lgDelay(0.9, () => { boom(x, y, 240, 420); lgFuHit(x, y, W.R, 80, 3); lgFlash('rgba(10,0,30,1)', 0.7, 600, true); });
+    },
+    tp(x, y, W) {   // 텔레포트 건: 그 자리로 순간이동 + 충격파
+      if (!P.car && !solid(x, y, 0)) { P.x = x; P.y = y; }
+      for (let j = 0; j < W.n; j++) lgDelay(j * 0.22, () => { lgRing(x, y, W.c[j % 4], 10, W.R, 0.55, 3 + j); lgFuHit(x, y, W.R, W.dmg); shake = Math.max(shake, 8); });
+      lgColumn(x, y, W.c[0], 14, 700, 0.8, 0.7);
+    },
+    cross(x, y, W) {   // 천벌: 궤도 포격 십자 + 가운데 대포격
+      const pts = [[0, 0]]; for (let k = 1; k <= 2; k++) for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) pts.push([dx * W.R * k, dy * W.R * k]);
+      pts.forEach(([dx, dy], i) => lgDelay(0.1 + i * 0.12, () => {
+        const px = x + dx, py = y + dy; lgSkyBolt(px, py, W.c[i % 4]); lgColumn(px, py, W.c[i % 4], 20, 760, 0.6, 0.7); lgRing(px, py, W.c[i % 4], 8, 150, 0.6);
+        boom(px, py, i === 0 ? 200 : W.br, i === 0 ? 400 : W.bd); shake = Math.max(shake, 10);
+      }));
+    },
+    sun(x, y, W) {   // 헬리오스: 태양 — 황금 기둥 + 사방 낙뢰
+      lgColumn(x, y, W.c[0], 36, 900, 1.4, 0.7); lgColumn(x, y, W.c[1], 16, 900, 1.2, 0.8);
+      for (let j = 0; j < 3; j++) lgRing(x, y, W.c[j], 10, W.R + j * 60, 0.9 + j * 0.2, 3 + j);
+      for (let i = 0; i < 10; i++) lgDelay(0.1 + i * 0.09, () => { const a = i / 10 * 6.283, px = x + Math.cos(a) * W.R * 0.7, py = y + Math.sin(a) * W.R * 0.7; lgSkyBolt(px, py, W.c[i % 4]); boom(px, py, 80, 130); });
+      lgDelay(0.7, () => { boom(x, y, 280, 560); lgFuHit(x, y, W.R, 120); lgFlash('rgba(255,245,200,1)', 0.8, 700, true); });
+    },
+    swords(x, y, W) {   // 천검우: 하늘에서 검이 둥글게 꽂혀요
+      for (let i = 0; i < W.n; i++) lgDelay(0.08 + i * 0.07, () => {
+        const a = i / W.n * 6.283, px = x + Math.cos(a) * W.R, py = y + Math.sin(a) * W.R, c = W.c[i % 4];
+        const m = new THREE.Mesh(lgGeo.box, lgMat(c, 0.95)); m.scale.set(6, 70, 2); m.position.set(px, 600, py);
+        lgAdd(0.5, [m], k => { const kk = Math.min(1, k / 0.4); m.position.y = kk < 1 ? 600 - (600 - 40) * kk * kk : 40; m.material.opacity = k < 0.75 ? 0.95 : 0.95 * (1 - k) * 4; });
+        lgDelay(0.2, () => { boom(px, py, W.br, W.bd); lgRing(px, py, c, 6, 100, 0.5); lgSpark(px, py, 10, c, 6); });
+      });
+      lgDelay(0.08 + W.n * 0.07 + 0.3, () => { boom(x, y, 240, 440); lgRing(x, y, 0xffffff, 10, 340, 0.8); lgColumn(x, y, W.c[0], 26, 760, 0.9, 0.7); });
+    }
+  };
+  function lgConverge(x, y, w) {
+    const W = LG_FUW[w] || LG_FUW_DEF, nm = W.nm, cols = W.c;
+    lgFuBanner('👑 ' + nm, (WP[w] ? WP[w].n + ' · ' : '') + '⚡ 뇌신 · 💰 미다스 · 🌌 공허 · ⏳ 시간 지배 — 레전드 합일');
     lgFlash('rgba(8,4,28,1)', 0.5, 450, true); playSound('warp'); shake = Math.max(shake, 6);
     cols.forEach((c, i) => { lgRing(x, y, c, 250 - i * 20, 24, 0.45, 3 + i * 1.4, 0.85); for (let n = 0; n < 8; n++) lgP(0, 0, rnd(8, 70), 0, 0, rnd(-20, 60), { col: c, life: 0.45, sz: rnd(1.8, 3.2), orb: { cx: x, cy: y, ang: rnd(0, 6.283), rad: rnd(120, 190), av: 7, rv: -300 } }); });
     lgColumn(x, y, 0xffffff, 6, 720, 0.45, 0.35);
-    lgDelay(0.45, () => lgFuse(x, y));
+    lgDelay(0.45, () => lgFuse(x, y, W));
   }
-  function lgFuse(x, y) {
-    const cols = [0x8fd8ff, 0xffd23f, 0xc27bff, 0x7fe0ff];
-    lgSkyBolt(x, y, 0xffffff); lgSkyBolt(x + 34, y - 22, 0xffd23f); lgSkyBolt(x - 34, y + 22, 0xc27bff);
-    cols.forEach((c, i) => lgRing(x, y, c, 10, 190 + i * 80, 0.8 + i * 0.15, 3 + i * 1.6, 0.85));
-    lgColumn(x, y, 0xffffff, 16, 720, 1.0, 0.55); lgColumn(x, y, 0xffd23f, 28, 720, 1.3, 0.28); lgColumn(x, y, 0xc27bff, 40, 720, 1.6, 0.2);
-    lgClock(x, y); lgCoins(x, y, 10, 46, 260); lgRain = { x, y, t: 1.4 };
-    for (let i = 0; i < 70; i++) { const a = rnd(0, 6.283), v = rnd(80, 340); lgP(x, y, 6, Math.cos(a) * v, Math.sin(a) * v, rnd(60, 300), { col: cols[i % 4], life: rnd(0.5, 1.1), sz: rnd(1.4, 3.4), g: 380 }); }
-    boom(x, y, 270, 520); MP.pvpRad(x, y, 200, 70, 9); thunderChain(x, y);
-    money += 20000; voidAdd(x, y, 7); timeWarp(x, y);   // 합일의 공허 균열은 7초 (일반 공허 인첸트는 15초 그대로)
+  function lgFuse(x, y, W) {
+    const cols = W.c;
+    (LGF[W.st] || LGF.classic)(x, y, W);   // 무기마다 다른 합일 공격
+    lgColumn(x, y, 0xffffff, 16, 720, 1.0, 0.5);
+    lgCoins(x, y, 10, 30, 220);
+    for (let i = 0; i < 50; i++) { const a = rnd(0, 6.283), v = rnd(80, 340); lgP(x, y, 6, Math.cos(a) * v, Math.sin(a) * v, rnd(60, 300), { col: cols[i % 4], life: rnd(0.5, 1.1), sz: rnd(1.4, 3.4), g: 380 }); }
+    boom(x, y, 220, 400); MP.pvpRad(x, y, 200, 70, 9);
+    money += 20000; voidAdd(x, y, 7); timeWarp(x, y);   // 공통: 합일의 공허 균열 7초 + 시간 정지 + $20,000
     lgFlash('rgba(255,250,225,1)', 0.8, 700, true); shake = Math.max(shake, 20); playSound('converge'); lgPop(x, y, 40, '+$20,000', '#fff2a0', true, true);
   }
   // ---- 🌩️ 뇌신: 낙뢰 + 번개 연쇄 + 감전 정지
@@ -1980,7 +2114,7 @@
       else if (id === 'l_void') { if (!lg.fuse) voidAdd(x, y); }   // 합일엔 합일 쪽 균열 1개만
       else if (id === 'l_time') timeWarp(x, y);
     }
-    if (lg.fuse) lgConverge(x, y);
+    if (lg.fuse) lgConverge(x, y, lg.w);
   }
 
   // ---- 매 프레임: 입자 · 이펙트 · 들고 있는 동안의 오라
@@ -4443,7 +4577,7 @@
     let enGate = 0;
     function fxShot(i) {   // 발사할 때마다 한 번 호출 → 이번 발사에 적용되는 인첸트 효과
       const r = { free: false, crit: false, split: 0, pr: 0, thru: 0, chain: 0, cdm: 1, stl: 1, hit: null };
-      const seenL = {}; lgSNow = lgCharged ? lgS() : { n: 0 }; const lg = { ids: [], v: {}, fuse: false, used: false, S: lgSNow };   // v23: 레전드/합일 효과는 총알이 닿은(맞은) 곳에서 터져요   // 짧게 클릭한 일반 발사에는 레전드/합일 효과가 없어요   // 발사 시작 시점의 겹침 상태를 먼저 읽어요 (합일 중엔 개별 타이틀 억제)
+      const seenL = {}; lgSNow = lgCharged ? lgS() : { n: 0 }; const lg = { ids: [], v: {}, fuse: false, used: false, S: lgSNow, w: i };   // v23: 레전드/합일 효과는 총알이 닿은(맞은) 곳에서 터져요   // 짧게 클릭한 일반 발사에는 레전드/합일 효과가 없어요   // 발사 시작 시점의 겹침 상태를 먼저 읽어요 (합일 중엔 개별 타이틀 억제)
       for (const e of enAll(i)) {
         const id = e.d.id, v = e.v;
         if (e.d.leg) { if (!lgCharged || seenL[id]) continue; seenL[id] = 1; }   // 같은 레전드를 여러 개 박아도 한 번만 적용
