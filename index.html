@@ -534,7 +534,7 @@
 
   // v23: 헬리오스(레전드 저격총) — 모든 것을 관통하는 황금 광선, 끝(벽/최대 사거리)에서 낙뢰 폭발
   function legSnipe(E, da, sub) {
-    E = E || {}; da = da || 0;
+    E = E || {}; da = da || 0; lgLiteT = performance.now() + 4500;
     const a = MP.aimA() + da, dx = Math.cos(a), dy = Math.sin(a), sl = MP.aimSl(P.z + 9), dm = 420 * dmgMul(MP.wlv(22)) * (E.crit ? 2.5 : 1) * (sub ? 0.6 : 1); let z = P.z + 9;
     const sx = P.x + dx * 12, sy = P.y + dy * 12, sz0 = z; let x = sx, y = sy, L = 2600, hitN = 0, pv = false; const done = new Set(), hits = [];
     for (let s2 = 0; s2 < 430; s2++) {
@@ -546,13 +546,13 @@
       if (!pv && MP.pvpRay(x, y, z, dm, E.hit)) { pv = true; hits.push([x, y]); }
     }
     const ex = sx + dx * L, ey = sy + dy * L, ez = Math.max(2, sz0 + sl * L);
-    lgSegs(lgPath([sx, sy, sz0], [ex, ey, ez], 1, 0), 0xffd23f, 3.2, 0.6);
+    lgSegs(lgPath([sx, sy, sz0], [ex, ey, ez], 1, 0), 0xffd23f, 1.0, 0.3);
     for (const h of hits.slice(0, 10)) { lgRing(h[0], h[1], 0xffe27a, 8, 90, 0.5); lgSpark(h[0], h[1], 14, 0xfff2a0, 8); }
     for (const h of hits.slice(0, 6)) lgSkyBolt(h[0], h[1], 0xffe27a);
     if (sub) { lgDelay(0.3, () => { lgRing(ex, ey, 0xffe27a, 8, 120, 0.5); boom(ex, ey, 80, 150); }); return; }
-    shake = Math.max(shake, 12); lgFlash('radial-gradient(circle,rgba(255,230,140,.35),rgba(255,200,60,0) 70%)', 0.7, 400);
+    shake = Math.max(shake, 5); lgFlash('radial-gradient(circle,rgba(255,230,140,.35),rgba(255,200,60,0) 70%)', 0.7, 300);
     lgBanner('🎯 헬리오스', '#ffd23f', hits.length ? '관통 ' + hits.length + '명' : '황금 광선');
-    lgDelay(0.3, () => { if (E.lgd) lgRunAt(E.lgd, ex, ey); lgSkyBolt(ex, ey, 0xffe27a); lgColumn(ex, ey, 0xffd23f, 24, 620, 0.7, 0.8); lgRing(ex, ey, 0xffe27a, 10, 180, 0.7); boom(ex, ey, 120, 260); });
+    lgDelay(0.3, () => { if (E.lgd) lgRunAt(E.lgd, ex, ey); lgSkyBolt(ex, ey, 0xffe27a); lgColumn(ex, ey, 0xffd23f, 10, 620, 0.5, 0.35); lgRing(ex, ey, 0xffe27a, 10, 180, 0.7); boom(ex, ey, 120, 260); });
   }
   function snipe(E, idx) {
     E = E || {};
@@ -1748,6 +1748,8 @@
   const lgGeo = { s: new THREE.SphereGeometry(1, 8, 8), cy: new THREE.CylinderGeometry(1, 1, 1, 6, 1, true), coin: new THREE.CylinderGeometry(2.6, 2.6, 0.7, 10), ring: new THREE.RingGeometry(0.88, 1, 48), box: new THREE.BoxGeometry(1, 1, 1) };
   const lgMat = (col, op) => new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: op == null ? 1 : op, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
   const lps = [], lgFx = [], _lgUp = new THREE.Vector3(0, 1, 0);
+  // v26: 시야를 가리면 안 되는 무기(연사·저격·관통 계열)는 레전드/합일 이펙트를 가볍게 — 화면 번쩍임 1/5 · 타이틀 작게 · 기둥/광선 얇게
+  const LG_LITE = new Set([1, 5, 6, 7, 12, 13, 22]); let lgLiteT = 0; const lgLite = () => performance.now() < lgLiteT;
   const LG_CH = 1.0;   // v23: 레전드 인첸트 무기는 이 시간(초)만큼 꾹 눌러 게이지가 빨개져야 레전드/합일 공격이 나가요
   let lgCharged = true, lgChg = 0, lgTap = 0, lgFuI = 0, lgBigT = 0, lgFuEl = null, lgSNow = { n: 0 }, lgAN = 0, lgCv = 0, lgN = 0, lgFrz = 0, lgTwT = 0, lgAuraT = 0, lgPopT = 0, lgPopN = 0, lgRain = null, lgTA = null, lgBnEl = null;
   { const st = document.createElement('style');
@@ -1763,11 +1765,11 @@
     document.head.appendChild(st); }
   const lgFl = document.createElement('div');
   Object.assign(lgFl.style, { position: 'fixed', inset: '0', zIndex: '33', pointerEvents: 'none', opacity: '0' }); document.body.appendChild(lgFl);
-  function lgFlash(bg, a, ms, force) { if (!force && lgSNow.n === 4) return; lgFl.style.transition = 'none'; lgFl.style.background = bg; lgFl.style.opacity = String(a); void lgFl.offsetWidth; lgFl.style.transition = 'opacity ' + ms + 'ms ease-out'; lgFl.style.opacity = '0'; }
+  function lgFlash(bg, a, ms, force) { if (!force && lgSNow.n === 4) return; lgFl.style.transition = 'none'; lgFl.style.background = bg; lgFl.style.opacity = String(lgLite() ? a * 0.2 : a); void lgFl.offsetWidth; lgFl.style.transition = 'opacity ' + ms + 'ms ease-out'; lgFl.style.opacity = '0'; }
   function lgBanner(text, col, sub, force) {
     if (!force && lgSNow.n === 4) return;   // 레전드 합일 중에는 개별 타이틀을 끄고 합일 타이틀만 보여요
     if (performance.now() < lgFuT) return;   // v23: 합일 타이틀이 떠 있는 동안엔 다른 타이틀(무기 포함)을 띄우지 않아요
-    if (lgBnEl) lgBnEl.remove(); const d = document.createElement('div'); d.className = 'lgbn'; d.style.color = col; d.innerHTML = text + (sub ? '<small>' + sub + '</small>' : '');
+    if (lgBnEl) lgBnEl.remove(); const d = document.createElement('div'); d.className = 'lgbn'; d.style.color = col; if (lgLite()) { d.style.fontSize = 'clamp(14px,2.4vw,24px)'; d.style.top = '7%'; } d.innerHTML = text + (sub ? '<small>' + sub + '</small>' : '');
     document.body.appendChild(d); lgBnEl = d; setTimeout(() => { d.remove(); if (lgBnEl === d) lgBnEl = null; }, 1700);
   }
   function lgPop(x, y, z, text, col, big, force) {
@@ -1851,7 +1853,7 @@
   let lgFuT = 0;
   function lgFuBanner(title, sub) {
     lgFuT = performance.now() + 2500; if (lgBnEl) { lgBnEl.remove(); lgBnEl = null; }
-    if (lgFuEl) lgFuEl.remove(); const d = document.createElement('div'); d.className = 'lgfu'; d.innerHTML = '<b>' + title + '</b><small>' + sub + '</small>';
+    if (lgFuEl) lgFuEl.remove(); const d = document.createElement('div'); d.className = 'lgfu'; d.innerHTML = '<b>' + title + '</b><small>' + sub + '</small>'; if (lgLite()) { d.style.top = '7%'; d.firstChild.style.fontSize = 'clamp(18px,3.2vw,38px)'; d.firstChild.style.letterSpacing = '3px'; }
     document.body.appendChild(d); lgFuEl = d; setTimeout(() => { d.remove(); if (lgFuEl === d) lgFuEl = null; }, 2500);
   }
   function lgDelay(sec, fn) { let done = false; lgAdd(sec, [], k => { if (k >= 1 && !done) { done = true; fn(); } }); }
@@ -1933,17 +1935,17 @@
       const base = Math.hypot(x - P.x, y - P.y) < 8 ? P.a : Math.atan2(y - P.y, x - P.x);
       for (const off of W.ang) {
         const a = base + off, cs = Math.cos(a), sn = Math.sin(a), ex = P.x + cs * W.len, ey = P.y + sn * W.len;
-        lgSegs(lgPath([P.x, P.y, 14], [ex, ey, 14], 12, 4), W.c[0], W.th, 0.6); lgSegs(lgPath([P.x, P.y, 14], [ex, ey, 14], 12, 0), 0xffffff, W.th * 0.5, 0.45);
+        lgSegs(lgPath([P.x, P.y, 14], [ex, ey, 14], 12, 4), W.c[0], W.th * 0.5, 0.4); lgSegs(lgPath([P.x, P.y, 14], [ex, ey, 14], 12, 0), 0xffffff, W.th * 0.25, 0.3);
         lgDelay(0.1, () => {
           for (const e of lgTargets(P.x + cs * W.len / 2, P.y + sn * W.len / 2, W.len / 2 + 40)) {
             const t = (e.x - P.x) * cs + (e.y - P.y) * sn, pe = Math.abs(-(e.x - P.x) * sn + (e.y - P.y) * cs);
             if (t > 0 && t < W.len && pe < W.wd) { lgHit(e.k, e.o, W.dmg); lgSpark(e.x, e.y, 10, W.c[1], 6); }
           }
           if (W.ang.length > 1 || off === 0) { boom(x + (off ? cs * 40 : 0), y + (off ? sn * 40 : 0), W.br, W.bd); }
-          lgColumn(ex, ey, W.c[1], 12, 500, 0.5, 0.6);
+          lgColumn(ex, ey, W.c[1], lgLite() ? 5 : 12, 500, 0.4, lgLite() ? 0.3 : 0.6);
         });
       }
-      lgRing(x, y, W.c[1], 10, W.br * 1.5, 0.7); lgColumn(x, y, W.c[0], 18, 720, 0.8, 0.6);
+      lgRing(x, y, W.c[1], 10, W.br * 1.5, 0.7); lgColumn(x, y, W.c[0], lgLite() ? 6 : 18, 720, 0.6, lgLite() ? 0.3 : 0.6);
     },
     fire(x, y, W) {   // 화염방사기·네이팜: 불바다
       napAdd(x, y, W.t);
@@ -1977,10 +1979,10 @@
       }));
     },
     sun(x, y, W) {   // 헬리오스: 태양 — 황금 기둥 + 사방 낙뢰
-      lgColumn(x, y, W.c[0], 36, 900, 1.4, 0.7); lgColumn(x, y, W.c[1], 16, 900, 1.2, 0.8);
+      lgColumn(x, y, W.c[0], 12, 900, 1.0, 0.3); lgColumn(x, y, W.c[1], 5, 900, 0.9, 0.4);
       for (let j = 0; j < 3; j++) lgRing(x, y, W.c[j], 10, W.R + j * 60, 0.9 + j * 0.2, 3 + j);
       for (let i = 0; i < 10; i++) lgDelay(0.1 + i * 0.09, () => { const a = i / 10 * 6.283, px = x + Math.cos(a) * W.R * 0.7, py = y + Math.sin(a) * W.R * 0.7; lgSkyBolt(px, py, W.c[i % 4]); boom(px, py, 80, 130); });
-      lgDelay(0.7, () => { boom(x, y, 280, 560); lgFuHit(x, y, W.R, 120); lgFlash('rgba(255,245,200,1)', 0.8, 700, true); });
+      lgDelay(0.7, () => { boom(x, y, 280, 560); lgFuHit(x, y, W.R, 120); lgFlash('rgba(255,245,200,1)', 0.6, 500, true); });
     },
     swords(x, y, W) {   // 천검우: 하늘에서 검이 둥글게 꽂혀요
       for (let i = 0; i < W.n; i++) lgDelay(0.08 + i * 0.07, () => {
@@ -2003,12 +2005,12 @@
   function lgFuse(x, y, W) {
     const cols = W.c;
     (LGF[W.st] || LGF.classic)(x, y, W);   // 무기마다 다른 합일 공격
-    lgColumn(x, y, 0xffffff, 16, 720, 1.0, 0.5);
+    if (!lgLite()) lgColumn(x, y, 0xffffff, 16, 720, 1.0, 0.5);
     lgCoins(x, y, 10, 30, 220);
     for (let i = 0; i < 50; i++) { const a = rnd(0, 6.283), v = rnd(80, 340); lgP(x, y, 6, Math.cos(a) * v, Math.sin(a) * v, rnd(60, 300), { col: cols[i % 4], life: rnd(0.5, 1.1), sz: rnd(1.4, 3.4), g: 380 }); }
     boom(x, y, 220, 400); MP.pvpRad(x, y, 200, 70, 9);
     money += 20000; voidAdd(x, y, 7); timeWarp(x, y);   // 공통: 합일의 공허 균열 7초 + 시간 정지 + $20,000
-    lgFlash('rgba(255,250,225,1)', 0.8, 700, true); shake = Math.max(shake, 20); playSound('converge'); lgPop(x, y, 40, '+$20,000', '#fff2a0', true, true);
+    lgFlash('rgba(255,250,225,1)', 0.8, 700, true); shake = Math.max(shake, lgLite() ? 8 : 20); playSound('converge'); lgPop(x, y, 40, '+$20,000', '#fff2a0', true, true);
   }
   // ---- 🌩️ 뇌신: 낙뢰 + 번개 연쇄 + 감전 정지
   function thunderStrike(x, y) {
@@ -2107,7 +2109,7 @@
 
   // v23: 레전드/합일 효과를 (x, y) — 총알이 닿은 곳 — 에서 터뜨려요
   function lgRunAt(lg, x, y) {
-    if (!lg || lg.used) return; lg.used = true; lgSNow = lg.S || lgS();
+    if (!lg || lg.used) return; lg.used = true; lgSNow = lg.S || lgS(); if (LG_LITE.has(lg.w)) lgLiteT = performance.now() + 4500;
     for (const id of lg.ids) {
       if (id === 'l_thunder') thunderStrike(x, y);
       else if (id === 'l_midas') { const v = lg.v.l_midas || 3000; money += v; lgN = (lgN + 1) % 10; if (lgN === 0) { money += 50000; midasFx(x, y, 20, true); } else { midasFx(x, y, 20, false); lgPop(x, y, 30, '+$' + v.toLocaleString(), '#ffd23f'); } playSound('cash'); }
@@ -3496,7 +3498,7 @@
     const authMsg = r => { let t = AUTH_ERR[r.err] || '실패했어요'; if (r.err === 'bad_pw' && r.left !== undefined) t += ` (${r.left}번 더 틀리면 잠겨요)`; if (r.err === 'locked') t += ` · ${r.wait || 60}초 뒤에 다시 해보세요`; if (r.err === 'banned' && r.reason) t += ' · ' + r.reason; return t; };
     async function authRpc(fn, args) {
       if (!sb) return { ok: false, err: 'net' };
-      try { const { data, error } = await sb.rpc(fn, args); if (error || !data || typeof data !== 'object') return { ok: false, err: 'net' }; return data; } catch (e) { return { ok: false, err: 'net' }; }
+      try { const { data, error } = await sb.rpc(fn, args); if (error && (error.code === 'PGRST202' || /Could not find the function/i.test(error.message || ''))) return { ok: false, err: 'nofn' }; if (error || !data || typeof data !== 'object') return { ok: false, err: 'net' }; return data; } catch (e) { return { ok: false, err: 'net' }; }
     }
     let nameBusy = false, relogging = false, fleeOK = false;   // fleeOK: 게임이 스스로 새로고침할 때(로그아웃 등)는 도주 벌금 제외
     const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -4265,6 +4267,31 @@
 
     // ---------------------------------------------------------------- 닉네임별 저장 (Supabase cc_profiles)
     let profReady = false, profSig = '', profT = performance.now(), profBusy = false, admSeq = 0, admMiss = 0, admBusy = false;
+    let mySv = null, savedMoney = 0, sentSnap = '', syncV2 = true;   // v26: 저장 충돌 방지 (서버 버전 · 마지막으로 서버에 저장된 돈 · 마지막으로 보낸 내용)
+    const canon = v => v && typeof v === 'object' ? (Array.isArray(v) ? '[' + v.map(canon).join(',') + ']' : '{' + Object.keys(v).sort().map(k => JSON.stringify(k) + ':' + canon(v[k])).join(',') + '}') : JSON.stringify(v);
+    function applyOwn(o) {   // 서버 내용으로 무기·강화 교체 (새로 생긴 무기는 탄약 채움)
+      const had = new Set(Object.keys(own)); for (const k of Object.keys(own)) delete own[k]; Object.assign(own, o || {}); own.cars = own.cars || {}; own.wp = own.wp || []; own.wu = own.wu || {}; own.jpu = own.jpu || 0; stripOff();
+      for (let i = 6; i < WP.length; i++) if (own[i] && !had.has(String(i))) am[i] = WP[i].mag;
+      if (wi >= 6 && !own[wi]) wi = 0;
+    }
+    // 서버에 있는 최신 상태를 가져와 맞춰요 (다른 탭·기기·경매·레이드·관리자가 바꾼 걸 덮어쓰지 않으려고). 안 저장된 '번 돈'만 더해줘요.
+    async function resync(a) {
+      const nm = myName; const lr = await authRpc('cc_load', { p_name: nm, p_token: myToken });
+      if (nm !== myName) return false; if (lr.err === 'auth') { forceRelogin('로그인이 풀렸어요 · 다시 로그인해 주세요'); return false; } if (!lr.ok) { profSig = ''; return false; }
+      const sm = Math.max(0, Math.round(Number(lr.money) || 0)), so = lr.own || {};
+      admSeq = Number(lr.adm_seq) || 0; if (lr.ver !== undefined && lr.ver !== null) mySv = Number(lr.ver);
+      if (sentSnap && sm + '|' + canon(so) === sentSnap) { savedMoney = sm; profSig = ''; return true; }   // 내 저장은 서버에 들어갔는데 응답만 못 받았던 경우
+      const oldM = money, oldO = canon(own), delta = Math.max(0, money - savedMoney);
+      money = sm + delta; applyOwn(so); savedMoney = sm; sentSnap = ''; profSig = '';
+      LS.set('cc_own', JSON.stringify(own)); LS.set('cc_money', String(money));
+      if (Math.round(oldM) !== Math.round(money) || oldO !== canon(own) || a) {
+        if (a && a.src === 'auction') { title('🔨 경매장', a.note || '거래가 반영됐어요', '#ffd23f'); addFeed('🔨 경매장 거래 반영: ' + (a.note || ''), '#ffd23f'); }
+        else if (a) { title('🛠 관리자 수정', `돈 $${Math.round(money).toLocaleString()} · 무기/강화가 바뀌었어요`, '#ffd23f'); addFeed('🛠 관리자가 내 계정을 수정했어요', '#ffd23f'); }
+        else { title('🔄 저장 내용 맞춤', '다른 탭·기기에서 바뀐 내용을 반영했어요', '#7fb6ff'); addFeed('🔄 다른 곳에서 저장된 내용으로 맞췄어요 · $' + Math.round(money).toLocaleString(), '#7fb6ff'); }
+        playSound('cash'); if (shopOpen) renderShop(); if (panel) renderPanel();
+      }
+      return true;
+    }
     async function loadProfile() {
       if (!sb || guest) return; const nm = myName; profReady = false;
       try {
@@ -4281,6 +4308,7 @@
           const nw = Object.keys(own).filter(k => +k >= 6 && own[k]).length;
           addFeed(`💾 ${nm} 저장 불러옴 · $${Math.round(money).toLocaleString()}${nw ? ' · 특수무기 ' + nw + '개' : ''}`, '#7fd');
           profSig = JSON.stringify([Math.round(money), own]); profReady = true;
+          mySv = lr.ver !== undefined && lr.ver !== null ? Number(lr.ver) : null; savedMoney = Math.round(money); sentSnap = '';
           try { localStorage.removeItem('cc_flee'); } catch (e) {}   // 예전 도주 벌금 표시 정리 (새로고침 벌금 없음)
         } else { profReady = true; await saveProfile(true); addFeed(`💾 ${nm} 새 저장 만듦 (다른 기기에서도 이 닉네임이면 이어짐)`, '#7fd'); }
       } catch (e) {}
@@ -4289,7 +4317,17 @@
       if (!sb || !profReady || profBusy) return;
       const sig = JSON.stringify([Math.round(money), own]); if (!force && sig === profSig) return;
       profBusy = true; profSig = sig;
-      try { const sr = await authRpc('cc_save', { p_name: myName, p_token: myToken, p_money: Math.max(0, Math.round(money)), p_own: own }); if (sr.err === 'auth') forceRelogin('로그인이 풀렸어요 · 다시 로그인해 주세요'); else if (!sr.ok) profSig = ''; } catch (e) { profSig = ''; }
+      const sentM = Math.max(0, Math.round(money)); sentSnap = sentM + '|' + canon(own);
+      try {
+        const args = { p_name: myName, p_token: myToken, p_money: sentM, p_own: own };
+        if (syncV2) { args.p_seq = admSeq; if (mySv !== null) args.p_ver = mySv; }
+        let sr = await authRpc('cc_save', args);
+        if (sr.err === 'nofn' && syncV2) { syncV2 = false; delete args.p_seq; delete args.p_ver; sr = await authRpc('cc_save', args); }   // 서버에 v26 SQL이 아직 없으면 예전 방식으로
+        if (sr.err === 'auth') forceRelogin('로그인이 풀렸어요 · 다시 로그인해 주세요');
+        else if (sr.err === 'stale') await resync(null);   // 다른 곳에서 먼저 바뀜 → 덮어쓰지 않고 서버 내용에 맞춤
+        else if (!sr.ok) profSig = '';
+        else { if (sr.ver !== undefined && sr.ver !== null) mySv = Number(sr.ver); savedMoney = sentM; }
+      } catch (e) { profSig = ''; }
       profBusy = false;
     }
     // 관리자 수정 즉시 반영 (3초마다 확인)
@@ -4304,17 +4342,10 @@
         if (!data) { if (++admMiss >= 2) forceRelogin('계정이 바뀌었거나 로그아웃됐어요 (관리자 수정 등) · 다시 로그인해 주세요'); return; }
         admMiss = 0;
         if ((Number(data.adm_seq) || 0) > admSeq && data.adm) {
-          admSeq = Number(data.adm_seq) || 0; const a = data.adm, had = new Set(Object.keys(own));
-          if (a.money !== undefined) money = Math.max(0, Number(a.money) || 0);
-          if (a.own) {
-            for (const k of Object.keys(own)) delete own[k]; Object.assign(own, a.own); own.cars = own.cars || {}; own.wp = own.wp || []; own.wu = own.wu || {}; own.jpu = own.jpu || 0; stripOff();
-            for (let i = 6; i < WP.length; i++) if (own[i] && !had.has(String(i))) am[i] = WP[i].mag;
-            if (wi >= 6 && !own[wi]) wi = 0;
-          }
-          LS.set('cc_own', JSON.stringify(own)); LS.set('cc_money', String(money)); profSig = JSON.stringify([Math.round(money), own]);
-          if (a.src === 'auction') { title('🔨 경매장', a.note || '거래가 반영됐어요', '#ffd23f'); addFeed('🔨 경매장 거래 반영: ' + (a.note || ''), '#ffd23f'); }
-          else { title('🛠 관리자 수정', `돈 $${Math.round(money).toLocaleString()} · 무기/강화가 바뀌었어요`, '#ffd23f'); addFeed('🛠 관리자가 내 계정을 수정했어요', '#ffd23f'); }
-          playSound('cash'); if (shopOpen) renderShop(); if (panel) renderPanel();
+          for (let k = 0; k < 40 && profBusy; k++) await sleep(50);
+          if (profBusy) return;
+          profBusy = true;
+          try { await resync(data.adm); } finally { profBusy = false; }
         }
       } catch (e) {} finally { admBusy = false; }
     }
